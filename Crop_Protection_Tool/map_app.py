@@ -313,7 +313,7 @@ for column,question in zip(st.columns(2),QUESTIONS[:2]):
     if column.button(question,use_container_width=True):quick_question=question
 for column,question in zip(st.columns(2),QUESTIONS[2:]):
     if column.button(question,use_container_width=True):quick_question=question
-q=st.chat_input('Ask about your options, weather test, missing data or sources') or quick_question
+q=st.container().chat_input('Ask about your options, weather test, missing data or sources') or quick_question
 if q:
     with st.chat_message('user'):st.write(q)
     with st.spinner('Reading your current report…'):
