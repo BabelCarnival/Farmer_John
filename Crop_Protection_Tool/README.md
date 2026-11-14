@@ -36,3 +36,12 @@ The sensitivity tests add a temperature offset and multiply rainfall in historic
 Earlier prediction notebooks are retained as optional historical research artifacts. Their data cutoffs and forecast-skill limitations remain in the notebooks; they are not TerraRoute's main recommendation engine.
 
 See SOURCES.md for full attribution and TEAM_EDIT_GUIDE.md for the source-code map. AI assistance was used for concept exploration, code and draft text. Review and disclose it under current event rules. No public deployment or GitHub push is included.
+
+
+## Farmer interface update
+The six-step journey is retained. Rotation cards show the crop sequence, potential benefit, trade-off and next check side by side. Technical attributes and detailed tables are collapsed. Shared heat/dry-spell counts are shown once, and the historical scenario hides duplicate columns. Charts summarize daily history monthly for display only; calculations still use daily data.
+
+The public app includes a deterministic report helper with four question buttons and a text box. It reads only the current report and is explicitly labelled separately from AI chat. Local Ollama remains optional and must run beside the Streamlit Python process. Streamlit Cloud cannot reach Ollama on a visitor's Mac via localhost. No hosted AI service is configured. A readable farm summary and the full JSON report are both downloadable.
+
+### Updating an existing deployment
+Replace `map_app.py` and add `report_help.py` in the same `Crop_Protection_Tool` directory in your existing repository. Commit and push both files. Keep the Streamlit entry point `Crop_Protection_Tool/map_app.py`. The archive also includes the updated README and sources disclosure.
