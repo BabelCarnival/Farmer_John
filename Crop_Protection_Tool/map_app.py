@@ -25,9 +25,9 @@ st.components.v1.html('''<script>
 const P=window.parent,D=P.document;
 ["tr-rail","tr-rail-style"].forEach(i=>{const o=D.getElementById(i);if(o)o.remove();});
 if(P.__trSpy)D.removeEventListener("scroll",P.__trSpy,true);
-const items=[["location","1","Your Farm"],["history","2","Crop History"],["weather","3","Weather & Water"],["compare","4","Rotation Choices"],["whatif","5","Hotter, Drier or Wetter"]];
+const items=[["location","1","Your Farm"],["history","2","Crop History"],["weather","3","Weather & Water"],["compare","4","Rotation Choices"],["whatif","5","Hotter, Drier or Wetter"],["insights","6","Download Insights"]];
 const st=D.createElement("style");st.id="tr-rail-style";
-st.textContent="#location,#history,#weather,#compare,#whatif{scroll-margin-top:90px}#tr-rail{position:fixed;left:14px;top:50%;transform:translateY(-50%);z-index:999999;background:#fff;border:1px solid #dce7d8;border-radius:24px;padding:10px 8px;width:46px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 24px rgba(24,75,56,.15);transition:width .25s ease}#tr-rail:hover{width:235px}#tr-rail a{display:flex;align-items:center;gap:12px;height:30px;color:#184b38;text-decoration:none;white-space:nowrap;cursor:pointer}#tr-rail .n{flex:0 0 30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#eef3ea;font:600 13px sans-serif;transition:background .2s}#tr-rail .t{opacity:0;font:500 14px sans-serif;transition:opacity .15s}#tr-rail:hover .t{opacity:1}#tr-rail a:hover .n{background:#d7e8d0}#tr-rail a.active .n{background:#2e9e6b;color:#fff}#tr-rail a.active .t{color:#2e9e6b;font-weight:700}@media(max-width:900px){#tr-rail{display:none}}";
+st.textContent="#location,#history,#weather,#compare,#whatif,#insights{scroll-margin-top:90px}#tr-rail{position:fixed;left:14px;top:50%;transform:translateY(-50%);z-index:999999;background:#fff;border:1px solid #dce7d8;border-radius:24px;padding:10px 8px;width:46px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 24px rgba(24,75,56,.15);transition:width .25s ease}#tr-rail:hover{width:235px}#tr-rail a{display:flex;align-items:center;gap:12px;height:30px;color:#184b38;text-decoration:none;white-space:nowrap;cursor:pointer}#tr-rail .n{flex:0 0 30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#eef3ea;font:600 13px sans-serif;transition:background .2s}#tr-rail .t{opacity:0;font:500 14px sans-serif;transition:opacity .15s}#tr-rail:hover .t{opacity:1}#tr-rail a:hover .n{background:#d7e8d0}#tr-rail a.active .n{background:#2e9e6b;color:#fff}#tr-rail a.active .t{color:#2e9e6b;font-weight:700}@media(max-width:900px){#tr-rail{display:none}}";
 D.head.appendChild(st);
 const nav=D.createElement("div");nav.id="tr-rail";
 items.forEach(([id,n,label])=>{
@@ -303,7 +303,7 @@ if daily is not None and year is not None:
         st.caption('Each option receives the same weather. This is a sensitivity test, not a future weather forecast or a simulation of crop physiology and soil water balance.')
 else:st.info('Load location-specific daily weather to run scenarios. There is no silent temperature-only substitute for missing rainfall.')
 
-st.subheader('Results')
+st.subheader('6. Download Insights',anchor='insights')
 st.write('Use this comparison to shortlist a rotation for local review. Before trying it, check soil moisture, crop timing, cover establishment, equipment and a crop outlet.')
 if crop.lower() in REFERENCES:st.markdown('['+REFERENCES[crop.lower()]['note']+']('+REFERENCES[crop.lower()]['url']+')')
 export={'farm_inputs':profile,'data_metadata':bundle['metadata'] if bundle else None,'options':options,'excluded':blocked,'missing_evidence':gaps,'preference_weights':weights,'scenario_settings':scenario_settings,'scenario_results':scenario_result.to_dict('records') if scenario_result is not None else None}
