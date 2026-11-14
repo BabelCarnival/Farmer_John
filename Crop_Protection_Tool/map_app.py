@@ -121,8 +121,8 @@ with st.expander('See this point’s temperature history'):
     st.plotly_chart(px.line(site,x='year',y='summer_c',markers=True,labels={'summer_c':'Jun–Aug mean T2M (°C)','year':'Year'}),width='stretch')
 
 st.subheader('2. Crop History',anchor='history')
-mode=st.radio('Detailed evidence location',['Bundled Ames example','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True)
-if mode=='Bundled Ames example':
+mode=st.radio('Detailed evidence location',['Sample farm (Ames, Iowa)','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True)
+if mode=='Sample farm (Ames, Iowa)':
     latitude,longitude=42.03,-93.62
     st.caption('Detailed evidence below describes 42.03, −93.62, not every point on the regional map.')
 else:
@@ -157,7 +157,7 @@ st.subheader('3. Weather & Water',anchor='weather')
 def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,True)
 near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
 bundle=None
-if mode=='Bundled Ames example':
+if mode=='Sample farm (Ames, Iowa)':
     try:bundle=fetch_point(42.03,-93.62,'2001-01-01','2024-12-31')
     except Exception:
         bundle={'daily':load_daily(ROOT/'data/power_daily.csv'),'metadata':{'source':'Supplied NASA POWER daily CSV','requested_coordinates':[42.03,-93.62],'units':{'tmax_c':'°C','precip_mm':'mm/day'},'period':'2001–2024'},'warnings':[]}
