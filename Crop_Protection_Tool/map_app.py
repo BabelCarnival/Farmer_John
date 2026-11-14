@@ -249,7 +249,8 @@ with st.expander('Local checks and comparison method'):
     st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue currently covers Iowa corn/soybean systems only.')
     st.write('For ordering alternatives, selected cover, diversity and work priorities have equal weights on catalogue attributes coded 0–2. This is a planning heuristic, not validated agronomic suitability. Water savings are not scored. The internal values remain in the technical report for transparency; they are not shown as a farmer recommendation percentage.')
 
-st.subheader('5. Try hotter, drier or wetter conditions',anchor='whatif')scenario_result=None;scenario_settings=None
+st.subheader('5. Try hotter, drier or wetter conditions',anchor='whatif')
+scenario_result=None;scenario_settings=None
 if daily is not None and year is not None:
     scenario=st.selectbox('What-if scenario',['Historical','Hotter +2°C','Drier −20%','Wetter +20%','Custom'])
     delta=2. if scenario=='Hotter +2°C' else 0.;factor=.8 if scenario=='Drier −20%' else 1.2 if scenario=='Wetter +20%' else 1.
