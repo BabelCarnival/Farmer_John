@@ -25,7 +25,6 @@ with st.sidebar:
     st.markdown('### Sections')
     st.markdown('[1. Location](#location)  \n[2. Farm & crop history](#history)  \n[3. Weather & water](#weather)  \n[4. Compare rotations](#compare)  \n[5. What-if & report](#whatif)')
 st.image('https://i.imgur.com/1WlOmTC.png', width=400)
-st.caption('Powered by NASA Data')
 st.write('Explore rotation choices for your crops, soil and priorities')
 
 @st.cache_data
