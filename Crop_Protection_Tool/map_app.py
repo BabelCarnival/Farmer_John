@@ -120,7 +120,7 @@ site=raw[(raw.state==state)&raw.lat.eq(selected.lat)&raw.lon.eq(selected.lon)].s
 with st.expander('See this point’s temperature history'):
     st.plotly_chart(px.line(site,x='year',y='summer_c',markers=True,labels={'summer_c':'Jun–Aug mean T2M (°C)','year':'Year'}),width='stretch')
 
-st.subheader('Farm location and crop history')
+st.subheader('2. Crop History',anchor='history')
 mode=st.radio('Detailed evidence location',['Bundled Ames example','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True)
 if mode=='Bundled Ames example':
     latitude,longitude=42.03,-93.62
@@ -152,7 +152,7 @@ with b:
 profile=dict(crop=crop,sequence=sequence,crop_history=crop_history,region=state if inside_state else 'Unverified',texture=texture,drainage=drainage,soil_source=soil_source or 'Not supplied',water=water,priorities=priorities,equipment=equipment,market=market,cover_feasible=cover_feasible,sensitive_months=growing_months,bare_months=gap_months,latitude=latitude,longitude=longitude)
 st.caption('Results update on input changes. Crop dates identify growing-month coverage, not confirmed crop stages or bare soil; retained residues and unrecorded cover can protect calendar gaps.')
 
-st.subheader('2. Understand your weather and water conditions',anchor='weather')
+st.subheader('3. Weather & Water',anchor='weather')
 @st.cache_data(ttl=86400,show_spinner=False)
 def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,True)
 near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
@@ -189,7 +189,7 @@ if bundle:
         st.plotly_chart(px.bar(monthly,x='date',y='precip_mm',labels={'precip_mm':'Monthly precipitation total (mm)','date':'Date'}),width='stretch')
         st.caption('Monthly summaries make long records readable. All stress-test calculations still use daily observations; missing daily values are not filled.')
 
-st.subheader('3. Find periods needing closer attention')
+st.subheader('Periods needing closer attention')
 st.write('Growing months from entered dates: '+', '.join(calendar.month_abbr[m] for m in growing_months))
 st.write('Calendar gaps to verify for soil cover: '+(', '.join(calendar.month_abbr[m] for m in gap_months) or 'None identified'))
 st.caption('The growing-month union is a screening approximation across the entered crop history. It does not infer phenology, yield response or exposed soil from dates alone.')
@@ -303,7 +303,7 @@ if daily is not None and year is not None:
         st.caption('Each option receives the same weather. This is a sensitivity test, not a future weather forecast or a simulation of crop physiology and soil water balance.')
 else:st.info('Load location-specific daily weather to run scenarios. There is no silent temperature-only substitute for missing rainfall.')
 
-st.subheader('6. Understand your results, ask and save')
+st.subheader('Understand your results, ask and save')
 st.write('Use this comparison to shortlist a rotation for local review. Before trying it, check soil moisture, crop timing, cover establishment, equipment and a crop outlet.')
 if crop.lower() in REFERENCES:st.markdown('['+REFERENCES[crop.lower()]['note']+']('+REFERENCES[crop.lower()]['url']+')')
 export={'farm_inputs':profile,'data_metadata':bundle['metadata'] if bundle else None,'options':options,'excluded':blocked,'missing_evidence':gaps,'preference_weights':weights,'scenario_settings':scenario_settings,'scenario_results':scenario_result.to_dict('records') if scenario_result is not None else None}
