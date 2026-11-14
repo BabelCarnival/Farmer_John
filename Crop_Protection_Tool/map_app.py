@@ -268,7 +268,7 @@ for offset in range(0,len(options),3):
                 if not c['source']:st.write('Your entered crop history; no change assumed.')
 
 st.markdown('#### The practical differences',help='These describe the proposed management changes. They are not measured benefits or a percentage chance of success. NASA weather exposure is checked separately in Step 5.')
-ccomparison=[]
+comparison=[]
 for c in options:
     kind=c['id']
     comparison.append({'Option':c['name'],
