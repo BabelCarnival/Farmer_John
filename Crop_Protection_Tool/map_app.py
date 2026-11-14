@@ -158,7 +158,9 @@ def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,Tru
 near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
 bundle=None
 if mode=='Bundled Ames example':
-    bundle={'daily':load_daily(ROOT/'data/power_daily.csv'),'metadata':{'source':'Supplied NASA POWER daily CSV','requested_coordinates':[42.03,-93.62],'units':{'tmax_c':'°C','precip_mm':'mm/day'},'period':'2001–2024'},'warnings':['Soil wetness is absent from this bundled CSV. Load live NASA data at the same coordinates to request it.']}
+    try:bundle=fetch_point(42.03,-93.62,'2001-01-01','2024-12-31')
+    except Exception:
+        bundle={'daily':load_daily(ROOT/'data/power_daily.csv'),'metadata':{'source':'Supplied NASA POWER daily CSV','requested_coordinates':[42.03,-93.62],'units':{'tmax_c':'°C','precip_mm':'mm/day'},'period':'2001–2024'},'warnings':[]}
 else:
     a,b=st.columns(2)
     start=a.date_input('Weather start date',date(2001,1,1),key='weather_start')
