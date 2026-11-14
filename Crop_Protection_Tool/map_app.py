@@ -338,7 +338,7 @@ def ask_chat(question=None):
 
 new_reply=False
 with st.container(key='chatbubble'):
-    with st.popover('💬'):
+    with st.popover('\u200b'):
         pending=st.session_state.pop('chat_pending',None)
         if pending:
             with st.spinner('Reading your current report…'):
