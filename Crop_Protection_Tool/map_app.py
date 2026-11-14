@@ -20,7 +20,7 @@ from report_help import answer_report_question, QUESTIONS
 
 ROOT=Path(__file__).parent
 st.set_page_config(page_title='TerraRoute',page_icon='🌱',layout='wide')
-st.markdown('''<style>.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:4rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
+st.markdown('''<style>@keyframes logofade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}[data-testid="stImage"] img{animation:logofade 1.6s ease-out}.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:4rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
 with st.sidebar:
     st.markdown('### Sections')
     st.markdown('[1. Location](#location)  \n[2. Farm & crop history](#history)  \n[3. Weather & water](#weather)  \n[4. Compare rotations](#compare)  \n[5. What-if & report](#whatif)')
