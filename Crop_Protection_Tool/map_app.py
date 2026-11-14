@@ -83,14 +83,14 @@ def read_grid():
 
 try:raw,grid=read_grid()
 except Exception as e:st.error(f'Could not read the temperature workbook: {e}');st.stop()
-st.subheader('1. Your Farm',anchor='location',help='Map: a smooth color surface visualizes the supplied coarse temperature grid. Interpolation is for display only; calculations and selections use the original sampled values. Monthly T2M/Celsius column meanings are inferred pending original NASA export metadata.')
+st.subheader('1. Your Farm',anchor='location',help='Map: a smooth colour surface visualises the supplied coarse temperature grid. Interpolation is for display only; calculations and selections use the original sampled values. Monthly T2M/Celsius column meanings are inferred pending original NASA export metadata.')
 states=sorted(grid.state.unique());state=st.selectbox('State',states,index=states.index('IOWA'))
 g=grid[grid.state==state].copy().reset_index(drop=True)
 nearest=int(((g.lat-42.03)**2+(g.lon+93.62)**2).idxmin()) if state=='IOWA' else 0
 point_key='grid_choice_'+state
 if point_key not in st.session_state:st.session_state[point_key]=nearest
 point=st.selectbox('Grid cell (also selectable on the map)',range(len(g)),key=point_key,format_func=lambda i:f'{g.iloc[i].lat:.3f}, {g.iloc[i].lon:.3f}')
-color=st.radio('Color the map by',['Recent summer temperature','Change between two periods'],horizontal=True)
+color=st.radio('Colour the map by',['Recent summer temperature','Change between two periods'],horizontal=True)
 field='recent_c' if color=='Recent summer temperature' else 'change_c'
 map_key='temperature_cells_'+state+'_'+field
 fig=px.choropleth_map(g,geojson=grid_geojson(g),locations='point_id',featureidkey='id',color=field,
@@ -123,7 +123,7 @@ def choose_cell():
         if matches:st.session_state[point_key]=int(matches[0])
 st.plotly_chart(fig,width='stretch',key=map_key,on_select=choose_cell,selection_mode='points')
 selected=g.iloc[st.session_state[point_key]]
-st.caption('Smooth shading is an inverse-distance visualization between sampled points, not additional observations or field-scale precision. Click the map or use the grid selector for an original value. Color is clipped to the selected Census state outline; distant unsampled areas stay transparent. Background tiles require internet.')
+st.caption('Smooth shading is an inverse-distance visualisation between sampled points, not additional observations or field-scale precision. Click the map or use the grid selector for an original value. Colour is clipped to the selected Census state outline; distant unsampled areas stay transparent. Background tiles require internet.')
 a,b,c=st.columns(3)
 a.metric('Selected point',f'{selected.lat:.2f}, {selected.lon:.2f}')
 b.metric('Recent summer mean temperature',f'{selected.recent_c:.1f}°C')
@@ -193,11 +193,11 @@ if bundle:
     for warning in bundle['warnings']:st.warning(warning)
     wet=[c for c in ['GWETTOP','GWETROOT'] if c in daily and daily[c].notna().any()]
     if wet:
-        st.plotly_chart(px.line(daily,x='date',y=wet,render_mode='svg',title='NASA modeled soil-wetness indices (not field moisture measurements)'),width='stretch')
+        st.plotly_chart(px.line(daily,x='date',y=wet,render_mode='svg',title='NASA modelled soil-wetness indices (not field moisture measurements)'),width='stretch')
         st.caption('Use units in the downloaded NASA metadata. Wetness fractions are not automatically equivalent to volumetric water content.')
     with st.expander('Data provenance, units and missing values'):
         st.json(bundle['metadata']);st.write(daily.isna().sum().to_dict())
-        st.download_button('Download normalized NASA point data',daily.to_csv(index=False),'NASA_point_daily.csv','text/csv')
+        st.download_button('Download normalised NASA point data',daily.to_csv(index=False),'NASA_point_daily.csv','text/csv')
     with st.expander('Explore the weather history'):
         monthly=daily.set_index('date').resample('MS').agg(tmax_c=('tmax_c','mean'),precip_mm=('precip_mm',lambda x:x.sum(min_count=1))).reset_index()
         st.plotly_chart(px.line(monthly,x='date',y='tmax_c',render_mode='svg',labels={'tmax_c':'Monthly mean of daily maximum temperature (°C)','date':'Date'}),width='stretch')
@@ -327,7 +327,7 @@ st.download_button('Download my farm summary', '\n\n'.join(summary),'TerraRoute_
 with st.expander('Download the full data report'):
     st.download_button('Download technical report (JSON)',json.dumps(export,default=str,indent=2),'TerraRoute_decision_report.json','application/json')
 
-context=json.dumps({**export,'reference_notes':REFERENCES,'limits':'Planning preference index is not validated suitability. Soil wetness is modeled and not a field soil test. Never substitute Ames for another coordinate.'},default=str)
+context=json.dumps({**export,'reference_notes':REFERENCES,'limits':'Planning preference index is not validated suitability. Soil wetness is modelled and not a field soil test. Never substitute Ames for another coordinate.'},default=str)
 if 'map_chat' not in st.session_state:st.session_state.map_chat=[]
 if 'chat_seq' not in st.session_state:st.session_state.chat_seq=0
 @st.cache_data(ttl=30,show_spinner=False)
