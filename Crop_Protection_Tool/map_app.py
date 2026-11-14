@@ -19,7 +19,7 @@ from ollama_chat import installed_models, ask
 from report_help import answer_report_question, QUESTIONS
 
 ROOT=Path(__file__).parent
-st.set_page_config(page_title='TerraRoute',page_icon='🌱',layout='wide')
+st.set_page_config(page_title='TerraRoute',page_icon='https://i.imgur.com/4NhKhEe.png',layout='wide')
 st.markdown('''<style>@keyframes logofade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}[data-testid="stImage"] img{animation:logofade 1.6s ease-out}.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:4rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
 st.components.v1.html('''<script>
 const P=window.parent,D=P.document;
