@@ -289,19 +289,19 @@ if daily is not None and year is not None:
     delta=2. if scenario=='Hotter +2°C' else 0.;factor=.8 if scenario=='Drier −20%' else 1.2 if scenario=='Wetter +20%' else 1.
     if scenario=='Custom':
         delta=st.slider('Temperature offset (°C)',-2.,5.,2.,.5);factor=st.slider('Rainfall percentage',50,150,80,5)/100
-cover_months=st.multiselect('Assumed cover months for alternative options (confirm locally)',range(1,13),[3,4,10,11],format_func=lambda m:calendar.month_abbr[m],help='The chart below shows rainfall that falls in months you assume are uncovered. Lower values reflect this calendar assumption only; they do not measure reduced erosion, water savings or cover-crop success. Cover months have not been inferred from NASA data.')
-plans=[{'name':c['name'],'sensitive':growing_months,'bare':gap_months if c['id']=='current' else [m for m in gap_months if m not in cover_months]} for c in options]
-scenario_settings={'historical_year':int(year),'temperature_offset_c':delta,'rainfall_multiplier':factor,'assumed_cover_months':cover_months,'calendar_plans':plans}
-base=compare(daily,plans,year,35,1);altered=daily.copy();altered['tmax_c']+=delta;altered['precip_mm']*=factor
-result=compare(altered,plans,year,35,1)
-scenario_result=pd.DataFrame({'Strategy':result.strategy,'Baseline heat days':base.heat_days,'Scenario heat days':result.heat_days,'Baseline dry run (days)':base.dry_spell_days,'Scenario dry run (days)':result.dry_spell_days,'Baseline rain in calendar gaps (mm)':base.bare_rain_mm,'Scenario rain in assumed uncovered months (mm)':result.bare_rain_mm})
-a,b=st.columns(2)
-a.metric('Hot days inside your crop calendar',f'{int(result.heat_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.heat_days.iloc[0]-base.heat_days.iloc[0]):+d} days vs historical',help=f'Replaying {year}. A hot day is a day with a maximum temperature of 35°C or more. The crop calendar is shared across these options, so these weather counts are shown once.')
-b.metric('Longest rainfall gap inside your crop calendar',f'{int(result.dry_spell_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.dry_spell_days.iloc[0]-base.dry_spell_days.iloc[0]):+d} days vs historical',help=f'Replaying {year}. A rainfall gap is a run of consecutive days with under 1 mm of rain.')
-cover_chart=pd.DataFrame({'Strategy':result.strategy,'Rain during assumed uncovered months (mm)':result.bare_rain_mm})
-st.plotly_chart(px.bar(cover_chart,x='Strategy',y='Rain during assumed uncovered months (mm)',color_discrete_sequence=['#287554']),width='stretch')
-if scenario=='Historical':st.info('Historical replay: no weather change is applied. Select Hotter, Drier or Wetter to compare a changed scenario.')
-with st.expander('Compare the detailed numbers'):
+    cover_months=st.multiselect('Assumed cover months for alternative options (confirm locally)',range(1,13),[3,4,10,11],format_func=lambda m:calendar.month_abbr[m],help='The chart below shows rainfall that falls in months you assume are uncovered. Lower values reflect this calendar assumption only; they do not measure reduced erosion, water savings or cover-crop success. Cover months have not been inferred from NASA data.')
+    plans=[{'name':c['name'],'sensitive':growing_months,'bare':gap_months if c['id']=='current' else [m for m in gap_months if m not in cover_months]} for c in options]
+    scenario_settings={'historical_year':int(year),'temperature_offset_c':delta,'rainfall_multiplier':factor,'assumed_cover_months':cover_months,'calendar_plans':plans}
+    base=compare(daily,plans,year,35,1);altered=daily.copy();altered['tmax_c']+=delta;altered['precip_mm']*=factor
+    result=compare(altered,plans,year,35,1)
+    scenario_result=pd.DataFrame({'Strategy':result.strategy,'Baseline heat days':base.heat_days,'Scenario heat days':result.heat_days,'Baseline dry run (days)':base.dry_spell_days,'Scenario dry run (days)':result.dry_spell_days,'Baseline rain in calendar gaps (mm)':base.bare_rain_mm,'Scenario rain in assumed uncovered months (mm)':result.bare_rain_mm})
+    a,b=st.columns(2)
+    a.metric('Hot days inside your crop calendar',f'{int(result.heat_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.heat_days.iloc[0]-base.heat_days.iloc[0]):+d} days vs historical',help=f'Replaying {year}. A hot day is a day with a maximum temperature of 35°C or more. The crop calendar is shared across these options, so these weather counts are shown once.')
+    b.metric('Longest rainfall gap inside your crop calendar',f'{int(result.dry_spell_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.dry_spell_days.iloc[0]-base.dry_spell_days.iloc[0]):+d} days vs historical',help=f'Replaying {year}. A rainfall gap is a run of consecutive days with under 1 mm of rain.')
+    cover_chart=pd.DataFrame({'Strategy':result.strategy,'Rain during assumed uncovered months (mm)':result.bare_rain_mm})
+    st.plotly_chart(px.bar(cover_chart,x='Strategy',y='Rain during assumed uncovered months (mm)',color_discrete_sequence=['#287554']),width='stretch')
+    if scenario=='Historical':st.info('Historical replay: no weather change is applied. Select Hotter, Drier or Wetter to compare a changed scenario.')
+    with st.expander('Compare the detailed numbers'):
         shown=scenario_result if scenario!='Historical' else scenario_result[['Strategy','Baseline heat days','Baseline dry run (days)','Baseline rain in calendar gaps (mm)']]
         st.dataframe(shown.round(1),hide_index=True,width='stretch')
         st.caption('Each option receives the same weather. This is a sensitivity test, not a future weather forecast or a simulation of crop physiology and soil water balance.')
