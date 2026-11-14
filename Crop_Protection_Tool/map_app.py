@@ -24,7 +24,7 @@ st.markdown('''<style>.stApp{background:#f4f7f1}.block-container{max-width:1350p
 with st.sidebar:
     st.markdown('### Sections')
     st.markdown('[1. Location](#location)  \n[2. Farm & crop history](#history)  \n[3. Weather & water](#weather)  \n[4. Compare rotations](#compare)  \n[5. What-if & report](#whatif)')
-st.image('https://i.imgur.com/yiEyWiq.png', width=260)
+st.image('https://i.imgur.com/1WlOmTC.png', width=400)
 st.caption('Powered by NASA Data')
 st.write('Explore rotation choices for your crops, soil and priorities')
 
@@ -46,7 +46,7 @@ def read_grid():
 
 try:raw,grid=read_grid()
 except Exception as e:st.error(f'Could not read the temperature workbook: {e}');st.stop()
-st.subheader('1️⃣ Your Farm',anchor='location')
+st.subheader('1. Your Farm',anchor='location')
 st.caption('Map: a smooth color surface visualizes the supplied coarse temperature grid. Interpolation is for display only; calculations and selections use the original sampled values. Monthly T2M/Celsius column meanings are inferred pending original NASA export metadata.')
 states=sorted(grid.state.unique());state=st.selectbox('State',states,index=states.index('IOWA'))
 g=grid[grid.state==state].copy().reset_index(drop=True)
