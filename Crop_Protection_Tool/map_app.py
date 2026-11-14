@@ -22,8 +22,8 @@ ROOT=Path(__file__).parent
 st.set_page_config(page_title='TerraRoute',page_icon='🌱',layout='wide')
 st.markdown('''<style>.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:4rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
 st.image('https://i.imgur.com/yiEyWiq.png', width=260)
-st.caption('NASA-powered crop rotation decision support')
-st.write('Explore rotation choices for your crops, soil and priorities — supported by NASA environmental data.')
+st.caption('Powered by NASA Data')
+st.write('Explore rotation choices for your crops, soil and priorities')
 
 @st.cache_data
 def read_grid():
