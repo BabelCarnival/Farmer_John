@@ -14,7 +14,12 @@ from ollama_chat import installed_models, ask
 
 ROOT=Path(__file__).parent
 st.set_page_config(page_title='TerraRoute',page_icon='🌱',layout='wide')
-st.markdown('''<style>.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:1.6rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
+# Palette follows the viewer's active Streamlit theme (light/dark, incl. "use system setting")
+# so text always contrasts with its background.
+_dark=getattr(getattr(st.context,'theme',None),'type',None)=='dark'
+_c=dict(bg='#0f1a14',heading='#8fd4b0',card='#1a2a21',border='#2e4a3a') if _dark else \
+   dict(bg='#f4f7f1',heading='#184b38',card='#ffffff',border='#dce7d8')
+st.markdown(f'''<style>.stApp{{background:{_c['bg']}}}.block-container{{max-width:1350px;padding-top:1.6rem}}h1,h2,h3{{color:{_c['heading']}}}[data-testid="stMetric"]{{background:{_c['card']};padding:14px;border-radius:12px;border:1px solid {_c['border']}}}.stButton>button{{min-height:45px}}</style>''',unsafe_allow_html=True)
 st.title('TerraRoute')
 st.caption('NASA-powered crop rotation decision support')
 st.write('Explore rotation choices for your crops, soil and priorities — supported by NASA environmental data.')
