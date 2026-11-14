@@ -120,7 +120,7 @@ site=raw[(raw.state==state)&raw.lat.eq(selected.lat)&raw.lon.eq(selected.lon)].s
 with st.expander('See this point’s temperature history'):
     st.plotly_chart(px.line(site,x='year',y='summer_c',markers=True,labels={'summer_c':'Jun–Aug mean T2M (°C)','year':'Year'}),width='stretch')
 
-st.subheader('Farm location and crop history',anchor='history')
+st.subheader('Farm location and crop history')
 mode=st.radio('Detailed evidence location',['Bundled Ames example','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True)
 if mode=='Bundled Ames example':
     latitude,longitude=42.03,-93.62
