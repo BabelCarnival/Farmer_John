@@ -189,7 +189,7 @@ if bundle:
         st.plotly_chart(px.bar(monthly,x='date',y='precip_mm',labels={'precip_mm':'Monthly precipitation total (mm)','date':'Date'}),width='stretch')
         st.caption('Monthly summaries make long records readable. All stress-test calculations still use daily observations; missing daily values are not filled.')
 
-st.subheader('Periods needing closer attention')
+st.subheader('Periods Needing Closer Attention')
 st.write('Growing months from entered dates: '+', '.join(calendar.month_abbr[m] for m in growing_months))
 st.write('Calendar gaps to verify for soil cover: '+(', '.join(calendar.month_abbr[m] for m in gap_months) or 'None identified'))
 st.caption('The growing-month union is a screening approximation across the entered crop history. It does not infer phenology, yield response or exposed soil from dates alone.')
@@ -217,7 +217,7 @@ if near_ames:
         low=m[m.ndvi<.3];st.write(f'{len(low)} good-quality observations below illustrative NDVI 0.3. Candidate low-greenness periods need field validation; cloud filtering does not establish bare soil or crop identity.')
 else:st.caption('Vegetation data have not been supplied for these coordinates. The Ames pixel is not substituted.')
 
-st.subheader('4. Compare rotation choices for your farm',anchor='compare')
+st.subheader('4. Rotation Choices',anchor='compare')
 options,blocked,gaps,weights=recommend(profile)
 st.write('Compare what changes on your farm, then use Step 5 to check weather exposure.')
 for msg in gaps:st.info(msg)
@@ -276,7 +276,7 @@ with st.expander('Local checks and comparison method'):
     st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue currently covers Iowa corn/soybean systems only.')
     st.write('For ordering alternatives, selected cover, diversity and work priorities have equal weights on catalogue attributes coded 0–2. This is a planning heuristic, not validated agronomic suitability. Water savings are not scored. The internal values remain in the technical report for transparency; they are not shown as a farmer recommendation percentage.')
 
-st.subheader('5. Try hotter, drier or wetter conditions',anchor='whatif')
+st.subheader('5. Hotter, Drier or Wetter',anchor='whatif')
 scenario_result=None;scenario_settings=None
 if daily is not None and year is not None:
     scenario=st.selectbox('What-if scenario',['Historical','Hotter +2°C','Drier −20%','Wetter +20%','Custom'])
@@ -303,7 +303,7 @@ if daily is not None and year is not None:
         st.caption('Each option receives the same weather. This is a sensitivity test, not a future weather forecast or a simulation of crop physiology and soil water balance.')
 else:st.info('Load location-specific daily weather to run scenarios. There is no silent temperature-only substitute for missing rainfall.')
 
-st.subheader('Understand your results, ask and save')
+st.subheader('Results')
 st.write('Use this comparison to shortlist a rotation for local review. Before trying it, check soil moisture, crop timing, cover establishment, equipment and a crop outlet.')
 if crop.lower() in REFERENCES:st.markdown('['+REFERENCES[crop.lower()]['note']+']('+REFERENCES[crop.lower()]['url']+')')
 export={'farm_inputs':profile,'data_metadata':bundle['metadata'] if bundle else None,'options':options,'excluded':blocked,'missing_evidence':gaps,'preference_weights':weights,'scenario_settings':scenario_settings,'scenario_results':scenario_result.to_dict('records') if scenario_result is not None else None}
