@@ -43,7 +43,7 @@ def read_grid():
 
 try:raw,grid=read_grid()
 except Exception as e:st.error(f'Could not read the temperature workbook: {e}');st.stop()
-st.subheader('1. Understand your farm · choose a location')
+st.subheader('1. Understand your farm · choose a location',anchor='location')
 st.caption('Map: a smooth color surface visualizes the supplied coarse temperature grid. Interpolation is for display only; calculations and selections use the original sampled values. Monthly T2M/Celsius column meanings are inferred pending original NASA export metadata.')
 states=sorted(grid.state.unique());state=st.selectbox('State',states,index=states.index('IOWA'))
 g=grid[grid.state==state].copy().reset_index(drop=True)
@@ -94,7 +94,7 @@ site=raw[(raw.state==state)&raw.lat.eq(selected.lat)&raw.lon.eq(selected.lon)].s
 with st.expander('See this point’s temperature history'):
     st.plotly_chart(px.line(site,x='year',y='summer_c',markers=True,labels={'summer_c':'Jun–Aug mean T2M (°C)','year':'Year'}),width='stretch')
 
-st.subheader('Farm location and crop history')
+st.subheader('Farm location and crop history',anchor='history')
 mode=st.radio('Detailed evidence location',['Bundled Ames example','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True)
 if mode=='Bundled Ames example':
     latitude,longitude=42.03,-93.62
@@ -126,8 +126,7 @@ with b:
 profile=dict(crop=crop,sequence=sequence,crop_history=crop_history,region=state if inside_state else 'Unverified',texture=texture,drainage=drainage,soil_source=soil_source or 'Not supplied',water=water,priorities=priorities,equipment=equipment,market=market,cover_feasible=cover_feasible,sensitive_months=growing_months,bare_months=gap_months,latitude=latitude,longitude=longitude)
 st.caption('Results update on input changes. Crop dates identify growing-month coverage, not confirmed crop stages or bare soil; retained residues and unrecorded cover can protect calendar gaps.')
 
-st.subheader('2. Understand your weather and water conditions')
-@st.cache_data(ttl=86400,show_spinner=False)
+st.subheader('2. Understand your weather and water conditions',anchor='weather')@st.cache_data(ttl=86400,show_spinner=False)
 def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,True)
 near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
 bundle=None
@@ -191,8 +190,7 @@ if near_ames:
         low=m[m.ndvi<.3];st.write(f'{len(low)} good-quality observations below illustrative NDVI 0.3. Candidate low-greenness periods need field validation; cloud filtering does not establish bare soil or crop identity.')
 else:st.caption('Vegetation data have not been supplied for these coordinates. The Ames pixel is not substituted.')
 
-st.subheader('4. Compare rotation choices for your farm')
-options,blocked,gaps,weights=recommend(profile)
+st.subheader('4. Compare rotation choices for your farm',anchor='compare')options,blocked,gaps,weights=recommend(profile)
 st.write('Compare what changes on your farm, then use Step 5 to check weather exposure.')
 for msg in gaps:st.info(msg)
 if blocked:
@@ -250,8 +248,7 @@ with st.expander('Local checks and comparison method'):
     st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue currently covers Iowa corn/soybean systems only.')
     st.write('For ordering alternatives, selected cover, diversity and work priorities have equal weights on catalogue attributes coded 0–2. This is a planning heuristic, not validated agronomic suitability. Water savings are not scored. The internal values remain in the technical report for transparency; they are not shown as a farmer recommendation percentage.')
 
-st.subheader('5. Try hotter, drier or wetter conditions')
-scenario_result=None;scenario_settings=None
+st.subheader('5. Try hotter, drier or wetter conditions',anchor='whatif')scenario_result=None;scenario_settings=None
 if daily is not None and year is not None:
     scenario=st.selectbox('What-if scenario',['Historical','Hotter +2°C','Drier −20%','Wetter +20%','Custom'])
     delta=2. if scenario=='Hotter +2°C' else 0.;factor=.8 if scenario=='Drier −20%' else 1.2 if scenario=='Wetter +20%' else 1.
