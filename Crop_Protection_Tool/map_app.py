@@ -312,6 +312,7 @@ st.download_button('Download my farm summary', '\n\n'.join(summary),'TerraRoute_
 with st.expander('Download the full data report'):
     st.download_button('Download technical report (JSON)',json.dumps(export,default=str,indent=2),'TerraRoute_decision_report.json','application/json')
 st.markdown('### Ask about your comparison')
+st.caption('Use the chat bubble at the bottom left of the page to ask questions about your results.')
 @st.cache_data(ttl=30,show_spinner=False)
 def available_models():
     try:return installed_models()
@@ -325,29 +326,66 @@ with st.expander('Optional: connect Ollama for open-ended AI questions'):
     if models:model=st.selectbox('Connected Ollama model',models)
     if st.button('Check Ollama connection again'):
         available_models.clear();st.rerun()
-if not models:st.info('Report helper is ready. It answers the common questions below using your current results. Open-ended AI chat is not connected on this server.')
+if not models:st.info('Report helper is ready. It answers the common questions using your current results. Open-ended AI chat is not connected on this server.')
 else:st.caption('Ollama AI is connected. Check its explanations against the supporting data.')
 context=json.dumps({**export,'reference_notes':REFERENCES,'limits':'Planning preference index is not validated suitability. Soil wetness is modeled and not a field soil test. Never substitute Ames for another coordinate.'},default=str)
-if st.session_state.get('map_context')!=context:st.session_state.map_chat=[];st.session_state.map_context=context
-for q,a in st.session_state.map_chat:
-    with st.chat_message('user'):st.write(q)
-    with st.chat_message('assistant'):st.write(a)
-quick_question=None
-for column,question in zip(st.columns(2),QUESTIONS[:2]):
-    if column.button(question,use_container_width=True):quick_question=question
-for column,question in zip(st.columns(2),QUESTIONS[2:]):
-    if column.button(question,use_container_width=True):quick_question=question
-q=st.container().chat_input('Ask about your options, weather test, missing data or sources') or quick_question
-if q:
-    with st.chat_message('user'):st.write(q)
-    with st.spinner('Reading your current report…'):
-        if model:
-            try:a=ask(model,q,context,st.session_state.map_chat)
-            except Exception:
-                st.warning('Ollama is unavailable. Showing the report helper response instead.')
-                a=answer_report_question(q,export)
-        else:a=answer_report_question(q,export)
-    st.session_state.map_chat.append((q,a))
-    with st.chat_message('assistant'):st.write(a)
+if 'map_chat' not in st.session_state:st.session_state.map_chat=[]
+if 'chat_seq' not in st.session_state:st.session_state.chat_seq=0
+
+def ask_chat(question=None):
+    text=(question or st.session_state.get('chat_text','')).strip()
+    if text:st.session_state.chat_pending=text
+
+new_reply=False
+with st.container(key='chatbubble'):
+    with st.popover('💬'):
+        pending=st.session_state.pop('chat_pending',None)
+        if pending:
+            with st.spinner('Reading your current report…'):
+                if model:
+                    try:reply=ask(model,pending,context,st.session_state.map_chat)
+                    except Exception:reply=answer_report_question(pending,export)
+                else:reply=answer_report_question(pending,export)
+            st.session_state.map_chat.append((pending,reply))
+            st.session_state.chat_seq+=1
+            new_reply=True
+        if st.session_state.map_chat:
+            box=st.container(height=330)
+            for question,reply in st.session_state.map_chat:
+                with box.chat_message('user'):st.write(question)
+                with box.chat_message('assistant'):st.write(reply)
+        else:
+            st.caption('Ask about your options, weather test, missing data or sources.')
+            for question in QUESTIONS:
+                st.button(question,key='quick_'+question,on_click=ask_chat,args=(question,),use_container_width=True)
+        with st.form('chat_form',clear_on_submit=True):
+            st.text_input('Message',key='chat_text',placeholder='Type your question…',label_visibility='collapsed')
+            st.form_submit_button('Send',on_click=ask_chat,use_container_width=True)
+    if new_reply:
+        st.markdown(f'<span class="chatbadge" id="cb{st.session_state.chat_seq}">1</span>',unsafe_allow_html=True)
+st.components.v1.html('''<script>
+const P=window.parent,D=P.document;
+const old=D.getElementById("chat-style");if(old)old.remove();
+const css=D.createElement("style");css.id="chat-style";
+css.textContent=`.st-key-chatbubble{position:fixed!important;left:14px;bottom:28px;width:54px;height:54px;z-index:999998}
+.st-key-chatbubble [data-testid="stPopover"]{width:54px}
+.st-key-chatbubble [data-testid="stPopover"]>button,.st-key-chatbubble [data-testid="stPopoverButton"]{width:54px;height:54px;min-height:54px;padding:0;border-radius:50%;background:#2e9e6b!important;border:none!important;color:#fff;font-size:24px;box-shadow:0 6px 20px rgba(24,75,56,.3);transition:transform .15s ease}
+.st-key-chatbubble [data-testid="stPopover"]>button:hover,.st-key-chatbubble [data-testid="stPopoverButton"]:hover{transform:scale(1.12)}
+.st-key-chatbubble [data-testid="stPopover"]>button svg,.st-key-chatbubble [data-testid="stPopoverButton"] svg,.st-key-chatbubble [data-testid="stIconMaterial"]{display:none}
+.chatbadge{position:fixed;left:52px;bottom:66px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:#e53935;color:#fff;font:700 12px/20px sans-serif;text-align:center;z-index:999999;pointer-events:none}
+[data-testid="stPopoverBody"]{width:360px;max-width:92vw;max-height:80vh;border-radius:18px}`;
+D.head.appendChild(css);
+if(P.__chatTimer)clearInterval(P.__chatTimer);
+P.__chatTimer=setInterval(()=>{
+  const body=D.querySelector('[data-testid="stPopoverBody"]');
+  const open=body&&body.getBoundingClientRect().width>0;
+  if(open){
+    const b=D.querySelector(".chatbadge");if(b)b.style.display="none";
+    body.querySelectorAll("div").forEach(d=>{
+      if(d.scrollHeight>d.clientHeight+5&&/(auto|scroll)/.test(P.getComputedStyle(d).overflowY)&&d.__h!==d.scrollHeight){d.__h=d.scrollHeight;d.scrollTop=d.scrollHeight;}
+    });
+  }
+},300);
+</script>''',height=0)
 with st.expander('Full sources and methods'):st.markdown((ROOT/'SOURCES.md').read_text())
 st.caption('TerraRoute prototype. NASA environmental observations support local decisions; local crop/soil validation remains necessary. AI assistance disclosed in SOURCES.md.')
