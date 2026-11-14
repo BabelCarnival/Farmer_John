@@ -20,7 +20,7 @@ from report_help import answer_report_question, QUESTIONS
 
 ROOT=Path(__file__).parent
 st.set_page_config(page_title='TerraRoute',page_icon='https://i.imgur.com/4NhKhEe.png',layout='wide')
-st.markdown('''<style>@keyframes logofade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}[data-testid="stImage"] img{animation:logofade 1.6s ease-out}@keyframes trgrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}.stApp{background:linear-gradient(120deg,#ffffff,#f6f3e4,#ffffff,#f1ecd6,#ffffff);background-size:300% 300%;animation:trgrad 18s ease-in-out infinite}@media(prefers-reduced-motion:reduce){.stApp{animation:none}}.block-container{max-width:1350px;padding-top:4rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
+st.markdown('''<style>@keyframes logofade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}[data-testid="stImage"] img{animation:logofade 1.6s ease-out}@keyframes trgrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}.stApp{background:linear-gradient(120deg,#ffffff,#f6f3e4,#ffffff,#f1ecd6,#ffffff);background-size:300% 300%;animation:trgrad 18s ease-in-out infinite}@media(prefers-reduced-motion:reduce){.stApp{animation:none}}.block-container{max-width:1100px;padding-top:4rem}div[data-testid="stHeadingWithActionElements"]{margin-top:2.4rem}[data-testid="stCaptionContainer"]{color:#4f5f55!important;line-height:1.6}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
 st.components.v1.html('''<script>
 const P=window.parent,D=P.document;
 if(!P.sessionStorage.getItem("tr-intro")&&!D.getElementById("tr-intro")){
@@ -326,27 +326,25 @@ summary=['TerraRoute — farm decision summary',f'Location: {latitude:.4f}, {lon
 st.download_button('Download my farm summary', '\n\n'.join(summary),'TerraRoute_farm_summary.txt','text/plain')
 with st.expander('Download the full data report'):
     st.download_button('Download technical report (JSON)',json.dumps(export,default=str,indent=2),'TerraRoute_decision_report.json','application/json')
-st.markdown('### Ask about your comparison')
-st.caption('Use the chat bubble at the bottom left of the page to ask questions about your results.')
+
+context=json.dumps({**export,'reference_notes':REFERENCES,'limits':'Planning preference index is not validated suitability. Soil wetness is modeled and not a field soil test. Never substitute Ames for another coordinate.'},default=str)
+if 'map_chat' not in st.session_state:st.session_state.map_chat=[]
+if 'chat_seq' not in st.session_state:st.session_state.chat_seq=0
 @st.cache_data(ttl=30,show_spinner=False)
 def available_models():
     try:return installed_models()
     except Exception:return []
 models=available_models()
 model=None
-with st.expander('Optional: connect Ollama for open-ended AI questions'):
+with st.expander('Advanced: connect Ollama for open-ended AI questions'):
+    if not models:st.info('Report helper is ready. It answers the common questions in the chat bubble using your current results. Open-ended AI chat is not connected on this server.')
+    else:st.caption('Ollama AI is connected. Check its explanations against the supporting data.')
     st.write('Ollama must run on the same computer as the Streamlit Python process. On the public Streamlit site, localhost belongs to the hosted server; it cannot reach Ollama on your Mac.')
     st.code('ollama pull llama3.2:3b')
     st.write('For local AI chat, start Ollama and run this app locally. Public AI chat requires a separately configured hosted service; no hosted AI credentials are bundled.')
     if models:model=st.selectbox('Connected Ollama model',models)
     if st.button('Check Ollama connection again'):
         available_models.clear();st.rerun()
-if not models:st.info('Report helper is ready. It answers the common questions using your current results. Open-ended AI chat is not connected on this server.')
-else:st.caption('Ollama AI is connected. Check its explanations against the supporting data.')
-context=json.dumps({**export,'reference_notes':REFERENCES,'limits':'Planning preference index is not validated suitability. Soil wetness is modeled and not a field soil test. Never substitute Ames for another coordinate.'},default=str)
-if 'map_chat' not in st.session_state:st.session_state.map_chat=[]
-if 'chat_seq' not in st.session_state:st.session_state.chat_seq=0
-
 def ask_chat(question=None):
     text=(question or st.session_state.get('chat_text','')).strip()
     if text:st.session_state.chat_pending=text
