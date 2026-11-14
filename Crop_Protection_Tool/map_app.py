@@ -46,7 +46,7 @@ def read_grid():
 
 try:raw,grid=read_grid()
 except Exception as e:st.error(f'Could not read the temperature workbook: {e}');st.stop()
-st.subheader('1. Understand your farm · choose a location',anchor='location')
+st.subheader('1️⃣ Your Farm',anchor='location')
 st.caption('Map: a smooth color surface visualizes the supplied coarse temperature grid. Interpolation is for display only; calculations and selections use the original sampled values. Monthly T2M/Celsius column meanings are inferred pending original NASA export metadata.')
 states=sorted(grid.state.unique());state=st.selectbox('State',states,index=states.index('IOWA'))
 g=grid[grid.state==state].copy().reset_index(drop=True)
