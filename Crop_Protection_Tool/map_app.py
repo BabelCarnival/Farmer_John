@@ -21,9 +21,33 @@ from report_help import answer_report_question, QUESTIONS
 ROOT=Path(__file__).parent
 st.set_page_config(page_title='TerraRoute',page_icon='🌱',layout='wide')
 st.markdown('''<style>@keyframes logofade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}[data-testid="stImage"] img{animation:logofade 1.6s ease-out}.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:4rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
-with st.sidebar:
-    st.markdown('### Sections')
-    st.markdown('[1. Location](#location)  \n[2. Farm & crop history](#history)  \n[3. Weather & water](#weather)  \n[4. Compare rotations](#compare)  \n[5. What-if & report](#whatif)')
+st.components.v1.html('''<script>
+const P=window.parent,D=P.document;
+["tr-rail","tr-rail-style"].forEach(i=>{const o=D.getElementById(i);if(o)o.remove();});
+if(P.__trSpy)D.removeEventListener("scroll",P.__trSpy,true);
+const items=[["location","1","Your farm"],["history","2","Crop history"],["weather","3","Weather & water"],["compare","4","Compare rotations"],["whatif","5","What-if & report"]];
+const st=D.createElement("style");st.id="tr-rail-style";
+st.textContent="#location,#history,#weather,#compare,#whatif{scroll-margin-top:90px}#tr-rail{position:fixed;left:14px;top:50%;transform:translateY(-50%);z-index:999999;background:#fff;border:1px solid #dce7d8;border-radius:24px;padding:10px 8px;width:46px;box-sizing:border-box;overflow:hidden;display:flex;flex-direction:column;gap:6px;box-shadow:0 6px 24px rgba(24,75,56,.15);transition:width .25s ease}#tr-rail:hover{width:235px}#tr-rail a{display:flex;align-items:center;gap:12px;height:30px;color:#184b38;text-decoration:none;white-space:nowrap;cursor:pointer}#tr-rail .n{flex:0 0 30px;height:30px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#eef3ea;font:600 13px sans-serif;transition:background .2s}#tr-rail .t{opacity:0;font:500 14px sans-serif;transition:opacity .15s}#tr-rail:hover .t{opacity:1}#tr-rail a:hover .n{background:#d7e8d0}#tr-rail a.active .n{background:#2e9e6b;color:#fff}#tr-rail a.active .t{color:#2e9e6b;font-weight:700}@media(max-width:900px){#tr-rail{display:none}}";
+D.head.appendChild(st);
+const nav=D.createElement("div");nav.id="tr-rail";
+items.forEach(([id,n,label])=>{
+  const a=D.createElement("a");a.dataset.id=id;
+  const s1=D.createElement("span");s1.className="n";s1.textContent=n;
+  const s2=D.createElement("span");s2.className="t";s2.textContent=label;
+  a.append(s1,s2);
+  a.onclick=e=>{e.preventDefault();const el=D.getElementById(id);if(el)el.scrollIntoView({behavior:"smooth",block:"start"});};
+  nav.appendChild(a);
+});
+D.body.appendChild(nav);
+function update(){
+  let cur=items[0][0];
+  items.forEach(([id])=>{const el=D.getElementById(id);if(el&&el.getBoundingClientRect().top<=170)cur=id;});
+  nav.querySelectorAll("a").forEach(a=>a.classList.toggle("active",a.dataset.id===cur));
+}
+P.__trSpy=update;
+D.addEventListener("scroll",update,true);
+setTimeout(update,300);
+</script>''',height=0)
 st.image('https://i.imgur.com/k28tRZs.png', width=400)
 st.write('Explore rotation choices for your crops, soil and priorities')
 
