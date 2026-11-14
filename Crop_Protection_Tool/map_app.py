@@ -190,7 +190,8 @@ if near_ames:
         low=m[m.ndvi<.3];st.write(f'{len(low)} good-quality observations below illustrative NDVI 0.3. Candidate low-greenness periods need field validation; cloud filtering does not establish bare soil or crop identity.')
 else:st.caption('Vegetation data have not been supplied for these coordinates. The Ames pixel is not substituted.')
 
-st.subheader('4. Compare rotation choices for your farm',anchor='compare')options,blocked,gaps,weights=recommend(profile)
+st.subheader('4. Compare rotation choices for your farm',anchor='compare')
+options,blocked,gaps,weights=recommend(profile)
 st.write('Compare what changes on your farm, then use Step 5 to check weather exposure.')
 for msg in gaps:st.info(msg)
 if blocked:
