@@ -7,19 +7,19 @@ import pandas as pd
 import plotly.express as px
 import streamlit as st
 from map_layers import grid_geojson, smooth_overlay
-from rotation_rules import review
-from journey import environment, vulnerabilities, stress
+from analysis_v2 import parse_history,annual_exposure,monthly_exposure
+from data_access import load_environment
+from recommender import recommend
+from crop_catalog import REFERENCES
+from exposure import compare
+from map_layers import polygon_mask
+from datetime import date
 from exposure import load_daily, history, load_modis
 from ollama_chat import installed_models, ask
 
 ROOT=Path(__file__).parent
 st.set_page_config(page_title='TerraRoute',page_icon='🌱',layout='wide')
-# Palette follows the viewer's active Streamlit theme (light/dark, incl. "use system setting")
-# so text always contrasts with its background.
-_dark=getattr(getattr(st.context,'theme',None),'type',None)=='dark'
-_c=dict(bg='#0f1a14',heading='#8fd4b0',card='#1a2a21',border='#2e4a3a') if _dark else \
-   dict(bg='#f4f7f1',heading='#184b38',card='#ffffff',border='#dce7d8')
-st.markdown(f'''<style>.stApp{{background:{_c['bg']}}}.block-container{{max-width:1350px;padding-top:1.6rem}}h1,h2,h3{{color:{_c['heading']}}}[data-testid="stMetric"]{{background:{_c['card']};padding:14px;border-radius:12px;border:1px solid {_c['border']}}}.stButton>button{{min-height:45px}}</style>''',unsafe_allow_html=True)
+st.markdown('''<style>.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:1.6rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
 st.title('TerraRoute')
 st.caption('NASA-powered crop rotation decision support')
 st.write('Explore rotation choices for your crops, soil and priorities — supported by NASA environmental data.')
@@ -63,7 +63,15 @@ fig=px.choropleth_map(g,geojson=grid_geojson(g),locations='point_id',featureidke
 fig.update_traces(marker_line_width=0)
 vmin,vmax=(float(g[field].min()),float(g[field].max()))
 if field=='change_c':vmin,vmax=-max(abs(vmin),abs(vmax)),max(abs(vmin),abs(vmax))
-fig.update_layout(map_layers=[smooth_overlay(g,field,vmin,vmax,'YlOrRd' if field=='recent_c' else 'RdBu_r')])
+boundaries=json.loads((ROOT/'data/us_states_2024_20m.geojson').read_text())
+state_feature=next((f for f in boundaries['features'] if f['id']==state),None)
+if state_feature is None:
+    st.error('No state outline found.');st.stop()
+state_geometry=state_feature['geometry']
+fig.update_layout(map_layers=[
+    smooth_overlay(g,field,vmin,vmax,'YlOrRd' if field=='recent_c' else 'RdBu_r',clip_geometry=state_geometry),
+    {'sourcetype':'geojson','source':state_feature,'type':'line','color':'#304a3e','line':{'width':1.4},'below':'traces'}
+])
 fig.update_layout(height=460,margin=dict(l=0,r=0,t=0,b=0))
 def choose_cell():
     event=st.session_state.get(map_key,{})
@@ -75,7 +83,7 @@ def choose_cell():
         if matches:st.session_state[point_key]=int(matches[0])
 st.plotly_chart(fig,width='stretch',key=map_key,on_select=choose_cell,selection_mode='points')
 selected=g.iloc[st.session_state[point_key]]
-st.caption('Smooth shading is an inverse-distance visualization between sampled points, not additional observations or field-scale precision. Click the map or use the grid selector for an original value. Unsampled edges fade out. Background tiles require internet.')
+st.caption('Smooth shading is an inverse-distance visualization between sampled points, not additional observations or field-scale precision. Click the map or use the grid selector for an original value. Color is clipped to the selected Census state outline; distant unsampled areas stay transparent. Background tiles require internet.')
 a,b,c=st.columns(3)
 a.metric('Selected point',f'{selected.lat:.2f}, {selected.lon:.2f}')
 b.metric('Recent summer mean temperature',f'{selected.recent_c:.1f}°C')
@@ -85,84 +93,157 @@ site=raw[(raw.state==state)&raw.lat.eq(selected.lat)&raw.lon.eq(selected.lon)].s
 with st.expander('See this point’s temperature history'):
     st.plotly_chart(px.line(site,x='year',y='summer_c',markers=True,labels={'summer_c':'Jun–Aug mean T2M (°C)','year':'Year'}),width='stretch')
 
-st.subheader('Farm history, soil and priorities')
-left,right=st.columns(2)
-with left:
-    crop=st.selectbox('Main crop you want to keep',['Corn','Soybean','Wheat','Rice','Sorghum','Other'])
-    sequence=st.text_input('Your current crop sequence','Corn → soybean')
+st.subheader('Farm location and crop history')
+mode=st.radio('Detailed evidence location',['Bundled Ames example','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True)
+if mode=='Bundled Ames example':
+    latitude,longitude=42.03,-93.62
+    st.caption('Detailed evidence below describes 42.03, −93.62, not every point on the regional map.')
+else:
+    a,b=st.columns(2)
+    latitude=a.number_input('Farm latitude',-90.,90.,float(selected.lat),format='%.4f')
+    longitude=b.number_input('Farm longitude',-180.,180.,float(selected.lon),format='%.4f')
+inside_state=bool(polygon_mask(np.array([longitude]),np.array([latitude]),state_geometry)[0])
+if not inside_state:st.warning('These coordinates lie outside the selected state outline. Regional crop options will not be transferred to them. Daily NASA point data can still be loaded.')
+crop=st.selectbox('Main crop you intend to grow',['Corn','Soybean','Wheat','Rice','Sorghum','Other'])
+st.caption('Enter real crop dates. These sample dates are illustrative until you replace them. Weather risk windows will be calculated from these dates; actual physiological stages still require field confirmation.')
+default_history=pd.DataFrame({'Crop':['Corn','Soybean'],'Planting date':[date(2023,5,1),date(2024,5,1)],'Harvest date':[date(2023,10,1),date(2024,10,1)]})
+edited=st.data_editor(default_history,num_rows='dynamic',hide_index=True,width='stretch',key='crop_history_editor',column_config={'Crop':st.column_config.SelectboxColumn(options=['Corn','Soybean','Wheat','Rice','Sorghum','Oats','Red clover','Other'],required=True),'Planting date':st.column_config.DateColumn(required=True),'Harvest date':st.column_config.DateColumn(required=True)})
+try:crop_history,growing_months,gap_months=parse_history(edited)
+except ValueError as e:st.warning(str(e));st.stop()
+sequence=' → '.join(r['Crop'] for r in crop_history)
+a,b=st.columns(2)
+with a:
     texture=st.selectbox('Soil texture',['Unknown','Sandy','Loamy','Clayey'])
     drainage=st.selectbox('Drainage',['Unknown','Well drained','Moderate','Poor'])
-    soil_source=st.text_input('Soil information source (optional)',placeholder='For example: a soil test or local soil survey')
-    sensitive_months=st.multiselect('Crop months needing closer attention (local assumption)',range(1,13),[6,7,8],format_func=lambda n:calendar.month_abbr[n])
-    bare_months=st.multiselect('Expected uncovered months (local assumption)',range(1,13),[1,2,3,4,10,11,12],format_func=lambda n:calendar.month_abbr[n])
-with right:
+    soil_source=st.text_input('Local soil source',placeholder='Soil test or local soil map, including date')
     water=st.selectbox('Water access',['Rainfed','Limited irrigation','Irrigated','Unknown'])
-    priorities=st.multiselect('What matters most to you?',['Improve soil cover','Conserve water','Diversify the sequence','Limit added work/equipment'],default=['Improve soil cover','Conserve water'])
-    equipment=st.selectbox('Equipment constraints',['Unknown','No new equipment','Additional equipment/contractor possible'])
-    market=st.selectbox('Outlet for an added crop',['Unknown','No confirmed outlet','Confirmed market or forage use'])
-if not sequence.strip() or not sensitive_months:
-    st.warning('Enter your current crop sequence and at least one attention month to see the comparison.');st.stop()
-profile=dict(crop=crop,sequence=sequence.strip(),texture=texture,drainage=drainage,soil_source=soil_source or 'Not supplied',water=water,priorities=priorities,equipment=equipment,market=market,region=state,sensitive_months=sensitive_months,bare_months=bare_months)
-st.caption('Results below update automatically. For typed text, press Enter or click outside the box to apply your edit.')
-st.write('**Inputs used:** '+profile['crop']+'; '+profile['texture']+' soil; '+profile['drainage']+' drainage; '+profile['water']+'. Priorities: '+(', '.join(profile['priorities']) or 'None selected'))
-st.write(f'**Selected temperature evidence:** {state}, {selected.lat:.3f}, {selected.lon:.3f}: June–August mean {selected.recent_c:.1f}°C in 2016–2025; difference {selected.change_c:+.1f}°C from 2000–2009. This regional trend does not establish crop suitability or select cover species.')
-near_ames=state=='IOWA' and np.hypot((selected.lat-42.03)*111,(selected.lon+93.62)*82)<30
-environment(selected,state,near_ames)
-evidence=vulnerabilities(profile,near_ames)
-report,gaps=review(profile)
-st.caption('Soil and management inputs are supplied by you, not inferred from the temperature map. No local soil dataset is bundled.')
+with b:
+    priorities=st.multiselect('Priorities',['Improve soil cover','Conserve water','Diversify the sequence','Limit added work/equipment'],default=['Improve soil cover','Conserve water'])
+    equipment=st.selectbox('Equipment/contractor capacity',['Unknown','No new equipment','Additional equipment/contractor possible'])
+    market=st.selectbox('Added-crop market or forage outlet',['Unknown','No confirmed outlet','Confirmed market or forage use'])
+    cover_feasible=st.selectbox('Can establish and terminate a cover crop?',['Unknown','Yes','No'])
+profile=dict(crop=crop,sequence=sequence,crop_history=crop_history,region=state if inside_state else 'Unverified',texture=texture,drainage=drainage,soil_source=soil_source or 'Not supplied',water=water,priorities=priorities,equipment=equipment,market=market,cover_feasible=cover_feasible,sensitive_months=growing_months,bare_months=gap_months,latitude=latitude,longitude=longitude)
+st.caption('Results update on input changes. Crop dates identify growing-month coverage, not confirmed crop stages or bare soil; retained residues and unrecorded cover can protect calendar gaps.')
 
-st.subheader('4. Compare three rotation strategies')
-st.write('Keep your intended crop in the sequence and compare options. These are candidates for local review, not a suitability ranking or predicted soil-health gains.')
-for _,r in report.iterrows():
+st.subheader('2. Load environmental evidence for this location')
+@st.cache_data(ttl=86400,show_spinner=False)
+def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,True)
+near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
+bundle=None
+if mode=='Bundled Ames example':
+    bundle={'daily':load_daily(ROOT/'data/power_daily.csv'),'metadata':{'source':'Supplied NASA POWER daily CSV','requested_coordinates':[42.03,-93.62],'units':{'tmax_c':'°C','precip_mm':'mm/day'},'period':'2001–2024'},'warnings':['Soil wetness is absent from this bundled CSV. Load live NASA data at the same coordinates to request it.']}
+else:
+    a,b=st.columns(2)
+    start=a.date_input('Weather start date',date(2001,1,1),key='weather_start')
+    end=b.date_input('Weather end date',date(2025,12,31),max_value=date.today(),key='weather_end')
+    query_key=json.dumps([latitude,longitude,str(start),str(end)])
+    if st.button('Load NASA weather and soil wetness',type='primary'):
+        try:
+            with st.spinner('Requesting this point from NASA POWER…'):
+                loaded=fetch_point(latitude,longitude,str(start),str(end))
+            st.session_state.point_data=loaded;st.session_state.point_key=query_key
+        except Exception as e:st.error('NASA data could not be loaded. No other location was substituted. '+str(e))
+    if st.session_state.get('point_key')==query_key:bundle=st.session_state.point_data
+    else:st.info('Click Load NASA weather and soil wetness for these coordinates/dates. Rotation constraints below can still be reviewed before loading.')
+daily=bundle['daily'] if bundle else None
+if bundle:
+    st.success(f"Loaded {len(daily):,} daily rows for {latitude:.4f}, {longitude:.4f}. Missing observations remain missing.")
+    for warning in bundle['warnings']:st.warning(warning)
+    wet=[c for c in ['GWETTOP','GWETROOT'] if c in daily and daily[c].notna().any()]
+    if wet:
+        st.plotly_chart(px.line(daily,x='date',y=wet,title='NASA modeled soil-wetness indices (not field moisture measurements)'),width='stretch')
+        st.caption('Use units in the downloaded NASA metadata. Wetness fractions are not automatically equivalent to volumetric water content.')
+    with st.expander('Data provenance, units and missing values'):
+        st.json(bundle['metadata']);st.write(daily.isna().sum().to_dict())
+        st.download_button('Download normalized NASA point data',daily.to_csv(index=False),'NASA_point_daily.csv','text/csv')
+    st.plotly_chart(px.line(daily,x='date',y='tmax_c',labels={'tmax_c':'Daily maximum air temperature (°C)','date':'Date'}),width='stretch')
+    st.plotly_chart(px.bar(daily,x='date',y='precip_mm',labels={'precip_mm':'Precipitation (mm/day)','date':'Date'}),width='stretch')
+
+st.subheader('3. Identify vulnerable periods from crop dates and weather')
+st.write('Growing months from entered dates: '+', '.join(calendar.month_abbr[m] for m in growing_months))
+st.write('Calendar gaps to verify for soil cover: '+(', '.join(calendar.month_abbr[m] for m in gap_months) or 'None identified'))
+st.caption('The growing-month union is a screening approximation across the entered crop history. It does not infer phenology, yield response or exposed soil from dates alone.')
+year=None;window_table=None
+if daily is not None:
+    annual=annual_exposure(daily,growing_months);eligible=annual[annual.coverage>=.95]
+    if eligible.empty:st.warning('No seasons have at least 95% valid daily coverage inside the entered growing months.')
+    else:
+        default=int(eligible.loc[eligible['index'].idxmax(),'year']);years=eligible.year.astype(int).tolist()
+        year=st.selectbox('Historical season (default: highest combined exposure)',years,index=years.index(default))
+        sample=daily[daily.date.dt.year==year]
+        window_table=monthly_exposure(sample,growing_months)
+        focus=window_table[window_table['Within entered crop season']].copy()
+        focus['screen_rank']=focus['Heat days ≥35°C'].rank(pct=True)+focus['Longest rainfall gap (days)'].rank(pct=True)
+        top=focus.nlargest(min(3,len(focus)),'screen_rank')
+        st.write('Weather periods to inspect first: '+', '.join(calendar.month_abbr[int(m)] for m in top.Month))
+        st.caption('Ranked within this replay year by heat-day and rainfall-gap exposure during the entered growing season. These are not automatically critical physiological stages. 35°C and <1 mm/day are screening settings, not crop-damage thresholds.')
+        st.dataframe(window_table.round(1),hide_index=True,width='stretch')
+if near_ames:
+    with st.expander('Ames 2024 vegetation evidence'):
+        m=load_modis(ROOT/'data/modis_2024.csv');m=m[(m.quality=='Good')&m.ndvi.notna()]
+        st.plotly_chart(px.line(m,x='date',y='ndvi',markers=True),width='stretch')
+        low=m[m.ndvi<.3];st.write(f'{len(low)} good-quality observations below illustrative NDVI 0.3. Candidate low-greenness periods need field validation; cloud filtering does not establish bare soil or crop identity.')
+else:st.caption('Vegetation data have not been supplied for these coordinates. The Ames pixel is not substituted.')
+
+st.subheader('4. Compare rotation candidates with your constraints')
+options,blocked,gaps,weights=recommend(profile)
+for msg in gaps:st.warning(msg)
+for item in blocked:st.warning('Excluded: '+item['option']+' — '+item['reason'])
+if len(options)<3:st.info(f'{len(options)} supported option(s) remain. The tool will not fabricate three feasible rotations when local evidence or constraints rule them out.')
+for c in options:
     with st.container(border=True):
-        st.markdown('### '+r.Strategy)
-        st.write('**Sequence:** '+r.Sequence)
-        a,b=st.columns(2)
-        a.write('**Potential soil role:** '+r['Potential soil role'])
-        a.write('**Connection to your priorities:** '+r['Priority connection'])
-        b.write('**Check first:** '+r['Review before choosing'])
-        b.write('**Feasibility:** '+r.Feasibility)
-        st.write('**Why this advice changed:** '+r['Inputs affecting this option'])
-        st.markdown('**Evidence:** '+r['Evidence basis'])
-if gaps:
-    st.warning('Before choosing: '+' '.join(gaps))
-if crop=='Corn':st.info('Crop characteristic: pollination is sensitive to water stress. Confirm tasseling/silking in the field; monthly temperatures do not identify the actual crop stage. Source: Iowa State Extension corn pollination guide.')
-elif crop=='Soybean':st.info('Crop characteristic: reproductive stages, especially R3–R6, deserve attention under water deficits. Confirm actual stage locally. Source: Iowa State Extension soybean drought guidance.')
-export=report.copy();export['selected_state']=state;export['lat']=selected.lat;export['lon']=selected.lon
-export['farm_inputs']=json.dumps(profile);export['data_limit']='Regional temperature context only; no field-level suitability/benefit model.'
-st.download_button('Save my rotation comparison',export.to_csv(index=False),'my_rotation_options.csv','text/csv')
+        st.markdown('### '+c['name']);st.write('**Sequence:** '+c['sequence'])
+        st.write('**Why:** '+c['priority_note']+' '+c['soil_note'])
+        st.write('**Main risk:** '+c['risk'])
+        st.write('**Next check:** confirm local establishment, soil and timing before choosing.')
+        with st.expander('Evidence and comparison attributes',expanded=False):
+            for key in c['source']:st.markdown('['+REFERENCES[key]['note']+']('+REFERENCES[key]['url']+')')
+            st.write({k:c[k] for k in ['cover_opportunity','diversity_opportunity','implementation_ease','score']})
+scored=pd.DataFrame([{'Strategy':c['name'],'Planning preference index':c['score']} for c in options])
+if scored['Planning preference index'].notna().any():
+    st.plotly_chart(px.bar(scored,x='Strategy',y='Planning preference index',range_y=[0,100]),width='stretch')
+    st.caption('Disclosed heuristic: three planning attributes are coded 0/1/2; chosen priorities give their attributes equal weights. Index = 100 × weighted sum / (2 × sum of active weights). Water benefits cannot be scored. This is not a validated suitability, yield or soil-health model. Unknown implementation details still need review.')
+    st.write('Active attribute weights:',weights)
 
-scenario_context=stress(profile,selected,state,near_ames,evidence)
-ames_context={k:v for k,v in (evidence or {}).items() if k!='daily'}
+st.subheader('5. Stress-test the eligible options')
+scenario_result=None;scenario_settings=None
+if daily is not None and year is not None:
+    scenario=st.selectbox('What-if scenario',['Historical','Hotter +2°C','Drier −20%','Wetter +20%','Custom'])
+    delta=2. if scenario=='Hotter +2°C' else 0.;factor=.8 if scenario=='Drier −20%' else 1.2 if scenario=='Wetter +20%' else 1.
+    if scenario=='Custom':
+        delta=st.slider('Temperature offset (°C)',-2.,5.,2.,.5);factor=st.slider('Rainfall percentage',50,150,80,5)/100
+    cover_months=st.multiselect('Assumed cover months for alternative options (confirm locally)',range(1,13),[3,4,10,11],format_func=lambda m:calendar.month_abbr[m])
+    plans=[{'name':c['name'],'sensitive':growing_months,'bare':gap_months if c['id']=='current' else [m for m in gap_months if m not in cover_months]} for c in options]
+    scenario_settings={'historical_year':int(year),'temperature_offset_c':delta,'rainfall_multiplier':factor,'assumed_cover_months':cover_months,'calendar_plans':plans}
+    base=compare(daily,plans,year,35,1);altered=daily.copy();altered['tmax_c']+=delta;altered['precip_mm']*=factor
+    result=compare(altered,plans,year,35,1)
+    scenario_result=pd.DataFrame({'Strategy':result.strategy,'Baseline heat days':base.heat_days,'Scenario heat days':result.heat_days,'Baseline dry run (days)':base.dry_spell_days,'Scenario dry run (days)':result.dry_spell_days,'Baseline rain in calendar gaps (mm)':base.bare_rain_mm,'Scenario rain in assumed uncovered months (mm)':result.bare_rain_mm})
+    st.dataframe(scenario_result.round(1),hide_index=True,width='stretch')
+    st.caption('Every plan gets the same historical weather and perturbation. Matching growth windows yield matching heat/rainfall-gap exposure; cover affects assumed uncovered months only. Scenario changes are not forecasts or predicted rotation benefits. Whole-cycle physiology and soil water balance are not simulated.')
+else:st.info('Load location-specific daily weather to run scenarios. There is no silent temperature-only substitute for missing rainfall.')
 
-st.subheader('6. Explain the results and ask questions')
-st.write('Every option shows its potential soil role, disadvantages, evidence and missing information. Soil-health benefits are not measured or predicted by this prototype.')
+st.subheader('6. Understand, ask and save')
+st.write('Key gaps: field soil measurements, verified crop stages, actual cover establishment and economic records. These determine whether a candidate is practical; regional weather alone cannot establish this.')
+if crop.lower() in REFERENCES:st.markdown('['+REFERENCES[crop.lower()]['note']+']('+REFERENCES[crop.lower()]['url']+')')
+export={'farm_inputs':profile,'data_metadata':bundle['metadata'] if bundle else None,'options':options,'excluded':blocked,'missing_evidence':gaps,'preference_weights':weights,'scenario_settings':scenario_settings,'scenario_results':scenario_result.to_dict('records') if scenario_result is not None else None}
+st.download_button('Save my decision report',json.dumps(export,default=str,indent=2),'TerraRoute_decision_report.json','application/json')
 with st.expander('Connect local Ollama chat'):
-    st.write('Open Ollama on this computer. Install a model with the command below, then refresh the page. Chat uses local inference.')
-    st.code('ollama pull llama3.2:3b')
+    st.code('ollama pull llama3.2:3b');st.write('Open Ollama on this computer and refresh the page. Chat is optional.')
 try:models=installed_models()
 except Exception:models=[]
 model=st.selectbox('Local model',models) if models else None
-if not models:st.caption('Chat is not connected. The map and rotation comparison work without Ollama.')
-context=json.dumps({'selected_region':state,'selected_grid':[selected.lat,selected.lon],
-    'summer_mean_T2M_2016_2025':selected.recent_c,'historical_difference_c':selected.change_c,
-    'farm_inputs':profile,'rotation_review':report.to_dict('records'),'Ames_separate_example':ames_context,'scenario_stress_test':scenario_context,
-    'limitations':'No predicted benefits, local soil database, yield model or suitability ranking. State workbook monthly units/schema inferred; user attributes it to NASA.'},default=str)
-if st.session_state.get('map_context')!=context:
-    st.session_state.map_chat=[];st.session_state.map_context=context
+context=json.dumps({**export,'reference_notes':REFERENCES,'limits':'Planning preference index is not validated suitability. Soil wetness is modeled and not a field soil test. Never substitute Ames for another coordinate.'},default=str)
+if st.session_state.get('map_context')!=context:st.session_state.map_chat=[];st.session_state.map_context=context
 for q,a in st.session_state.map_chat:
     with st.chat_message('user'):st.write(q)
     with st.chat_message('assistant'):st.write(a)
-q=st.chat_input('Ask about the evidence or a rotation trade-off',disabled=not models)
+q=st.chat_input('Ask about this comparison or its sources',disabled=not models)
 if q:
     try:
         with st.chat_message('user'):st.write(q)
-        with st.spinner('Reading your comparison…'):a=ask(model,q,context,st.session_state.map_chat)
+        with st.spinner('Reading the decision report…'):a=ask(model,q,context,st.session_state.map_chat)
         st.session_state.map_chat.append((q,a))
         with st.chat_message('assistant'):st.write(a)
-    except Exception as e:st.error('Could not contact the local model. Check Ollama and try again.');st.caption(str(e))
-with st.expander('Sources, methods and limits'):
-    st.markdown((ROOT/'SOURCES.md').read_text())
-    st.download_button('Download sources',(ROOT/'SOURCES.md').read_text(),'SOURCES.md','text/markdown')
-st.caption('Independent prototype. AI assistance used in development. NASA data does not by itself establish agronomic suitability. Local expert review is needed.')
+    except Exception as e:st.error('Ollama could not answer: '+str(e))
+with st.expander('Full sources and methods'):st.markdown((ROOT/'SOURCES.md').read_text())
+st.caption('TerraRoute prototype. NASA environmental observations support local decisions; local crop/soil validation remains necessary. AI assistance disclosed in SOURCES.md.')

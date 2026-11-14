@@ -1,4 +1,4 @@
-"""Display sampled grid values as approximate cells, without interpolation."""
+"""Original grid hit targets and a display-only, state-clipped smooth surface."""
 def grid_geojson(frame):
     features=[]
     for row in frame.itertuples():
@@ -9,7 +9,7 @@ def grid_geojson(frame):
     return {'type':'FeatureCollection','features':features}
 
 
-def smooth_overlay(frame,field,vmin,vmax,palette='YlOrRd'):
+def smooth_overlay(frame,field,vmin,vmax,palette='YlOrRd',clip_geometry=None):
     """IDW display raster only. Returns an image layer; never an analysis input."""
     import base64,io
     import numpy as np
@@ -33,7 +33,23 @@ def smooth_overlay(frame,field,vmin,vmax,palette='YlOrRd'):
     rgba=colormaps[palette](np.clip((vals-vmin)/max(vmax-vmin,1e-9),0,1))
     # Do not paint distant unsampled areas. Alpha fades near the support boundary.
     rgba[:,3]=.83*np.clip((.85-distance[:,0])/.2,0,1)
+    if clip_geometry is not None:
+        inside=polygon_mask(xx.ravel(),yy.ravel(),clip_geometry)
+        rgba[~inside,3]=0
     pixels=(rgba.reshape(len(ys),len(xs),4)*255).astype('uint8')
     b=io.BytesIO();Image.fromarray(pixels).save(b,format='PNG')
     return {'sourcetype':'image','source':'data:image/png;base64,'+base64.b64encode(b.getvalue()).decode(),
             'coordinates':[[west,north],[east,north],[east,south],[west,south]],'below':'traces','opacity':1}
+
+
+def polygon_mask(longitudes,latitudes,geometry):
+    """GeoJSON Polygon/MultiPolygon containment; preserve holes."""
+    import numpy as np
+    from matplotlib.path import Path
+    points=np.column_stack([longitudes,latitudes]);inside=np.zeros(len(points),dtype=bool)
+    polygons=[geometry['coordinates']] if geometry['type']=='Polygon' else geometry['coordinates']
+    for rings in polygons:
+        outer=Path(rings[0]).contains_points(points)
+        for hole in rings[1:]:outer &= ~Path(hole).contains_points(points)
+        inside |= outer
+    return inside
