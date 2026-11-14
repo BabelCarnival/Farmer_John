@@ -1,19 +1,76 @@
 # TerraRoute — submission draft
 
-TerraRoute is an interactive rotation-exploration prototype combining supplied temperature records attributed to NASA with an Ames NASA POWER and MODIS demonstration. Farmers choose a supported grid location, enter local soil information, intended crops, water access, equipment and market constraints, and priorities. They compare the current rotation with cover-crop and diversification options that retain their desired crops across the sequence. Rule-based notes expose water-use trade-offs, unknown soil conditions and feasibility constraints. NASA climate and vegetation evidence provides environmental context; potential soil benefits are supported by cited extension guidance, not measured or forecast by the model.
+Review this text against the final deployed app before submitting. Add the team's actual repository and demo links.
 
-This matters because adding a crop or cover can create soil-cover opportunities while adding water demand, equipment needs or market risks. Showing those trade-offs helps farmers form a focused plan for local review. The tool supports farmer judgement and does not guarantee suitability, yield, soil improvement or future forecast accuracy.
+## Project name
 
-Implemented: interactive state/grid map from the uploaded workbook; historical summer-temperature comparison; explicit soil/crop/priority inputs; three conditional strategy cards; comparison CSV export; separate Ames daily-weather and quality-filtered vegetation panel; optional local Ollama questions; source register. The supplied temperature workbook lacks original export metadata, so NASA provenance and inferred monthly schema/units must be confirmed before final scientific claims. No verified soil map or farm boundary is bundled.
+TerraRoute
 
-AI assistance: concept exploration, code and draft text used ChatGPT/Codex. Optional chat uses a user-installed Ollama model. No generated observations are used as environmental data. Disclose all assistance according to the current event rules.
+## High-level project summary
 
-Suggested demo: choose Iowa/Ames; show historical summer-temperature context; enter rainfed, sandy soil and soil-cover priority; compare three cards; set no confirmed market and show the diversification constraint; show the Ames evidence separately; save the decision table. Public deployment or a public video/slides link is still required for submission.
+TerraRoute is a crop-rotation decision-support prototype that helps farmers explore how changes to a crop sequence could fit their soil conditions, priorities and practical constraints. It connects NASA environmental evidence to a six-step journey: understand the farm, analyse conditions, identify vulnerable periods, compare rotation options, stress-test historical scenarios and explain the results.
 
-## Updated end-to-end journey
-TerraRoute collects farm and soil inputs, displays actual data coverage, identifies potential vulnerable periods, compares the current rotation with two source-linked alternatives, and runs transparent hotter/drier/wetter what-if tests. It explains trade-offs, assumptions and gaps beside each result. For the Iowa corn/soybean example, candidates include cereal rye after corn before soybean and a small-grain/red-clover diversification sequence, supported by cited extension guidance and an Iowa field study. For other regions these remain unverified categories needing local review. Scenario exposure differences come from weather perturbations and explicit crop-calendar assumptions, not a crop physiology or soil-health model.
+Farmers compare their current approach with supported cover-crop and diversification alternatives. Plain-language cards show potential roles, trade-offs, supporting references and next checks. The aim is to make rotation planning easier to discuss and review locally, without treating regional weather data as proof of field-level suitability or future benefits.
 
-Soil-moisture observations are unavailable and visibly marked. Regional temperatures, Ames rainfall and one 2024 vegetation pixel have different scales and time ranges; coverage is never extended by pretending they describe every selected field.
+## Why it matters
 
-## Current code upgrade
-The latest implementation adds structured crop history and dates; selected-coordinate NASA POWER retrieval with optional modeled soil wetness; calculated weather-exposure review periods; a reviewed Iowa corn/soybean catalogue; constraint filtering and transparent planning-preference visualization; and selected-location historical scenario tests. Local evidence limits can leave fewer than three supported candidates. The model does not fabricate regional crop recommendations or numerical soil-health gains. Explanations use curated source notes and actual results, with optional local Ollama chat.
+Rotation changes involve more than selecting another crop. Farmers need to consider soil cover, water demand, crop timing, machinery and a market or forage use. TerraRoute brings those considerations together with environmental evidence so users can see where a promising option also creates a practical constraint or an unanswered question.
+
+## Detailed project description
+
+1. **Understand the farm:** collect location, dated crop history, intended crop, local soil information, water access, farmer priorities and implementation constraints.
+2. **Analyse environmental conditions:** display regional historical temperature context and bundled or live NASA POWER daily weather. Request optional modeled soil-wetness indices. Show a separate quality-filtered Ames vegetation example.
+3. **Identify vulnerable periods:** derive growing-month and potential cover-gap windows from entered crop dates; screen historical heat days and rainfall gaps for review. These windows do not establish actual crop stages or bare soil.
+4. **Compare rotations:** retain the current sequence as a baseline and offer up to two reviewed Iowa corn/soybean alternatives: cereal rye after corn before soybean, and a longer cycle with a small grain and red clover. Explain exclusions where equipment, crop outlets, cover-management capacity or regional evidence are limiting.
+5. **Stress-test:** apply transparent hotter, drier, wetter or custom changes to a historical weather season. Show common crop-season weather exposure once and compare rainfall during assumed uncovered months. The tool does not simulate rotation-induced changes to weather or soil water balance.
+6. **Explain:** show evidence, practical trade-offs, uncertainties and next checks. Provide a built-in report helper, optional local Ollama AI explanations and downloadable text/JSON reports.
+
+The application uses Python, Streamlit, pandas, NumPy, Plotly and the libraries listed in `requirements.txt`. A small rule-based crop catalogue and transparent exposure calculations support the workflow; it does not contain a trained crop-response model.
+
+## NASA data and resources used
+
+- **NASA POWER daily weather:** bundled `T2M_MAX` and `PRECTOTCORR`, 8,766 daily records for 2001–2024 at 42.03°N, 93.62°W near Ames, Iowa. Live point retrieval can request the selected coordinates and optional `GWETTOP` / `GWETROOT` modeled soil wetness, subject to availability.
+- **NASA MODIS/Terra MOD13Q1.061:** NDVI and pixel reliability extracted through NASA AppEEARS, Ames sample, 2024. Good-quality observations enter the vegetation panel.
+- **Supplied temperature workbook:** used for regional historical map context. Its NASA origin is user-attributed; original export metadata and inferred monthly schema/units must be confirmed before a definitive provenance claim.
+
+GPM/IMERG and Landsat imagery are not used by the current main app. Full source details are in `SOURCES.md`.
+
+## Other data and references
+
+US Census generalized state boundaries clip the map display. Farmer-entered soil, crop and management information supplies local context. Iowa State Extension guidance, an Iowa rotation study and NRCS cover-crop guidance support the reviewed examples and water-use cautions. No verified farm boundary, local soil-survey dataset or measured soil-health outcomes are bundled.
+
+## What is implemented and what remains limited
+
+The app implements mapping, structured inputs, point weather retrieval, historical screening, conditional rotation comparisons, scenario perturbations, explanations and report downloads. The reviewed alternative catalogue is limited to Iowa corn/soybean systems. Other locations can use loaded weather evidence but do not receive invented regional alternatives.
+
+Historical what-if scenarios are not future weather forecasts. Equal growing-month windows produce equal heat and rainfall-gap counts. Living cover uses water, and actual establishment is unverified. Weather grids and a vegetation pixel cannot establish crop suitability, irrigation requirements, yield, profit, erosion reduction or soil-health gains. Modeled wetness is not a field soil test.
+
+## Links
+
+- Public app: https://farmerjohn.streamlit.app/
+- Code repository: add the team's final public GitHub URL.
+- Demo: add a publicly accessible seven-slide presentation or video of 30 seconds or less, following the supplied submission instructions.
+
+Check that each link works without a password, permission request or registration. Confirm the public app has received the latest committed changes.
+
+## Use of SI / AI assistance
+
+ChatGPT/Codex assisted with concept exploration, Python code, interface wording and documentation. Optional question answering uses a locally installed Ollama model. The public report helper uses deterministic responses from current report fields and is not an AI model. Environmental observations are supplied or retrieved NASA data; crop-calendar and scenario settings are planning assumptions. The team must accurately disclose its actual use of AI and review all content against the event's current rules.
+
+## 30-second demo narration
+
+TerraRoute helps farmers explore crop rotations with NASA data. Enter crop history, soil conditions and priorities. Inspect weather exposure and possible cover gaps, then compare the current rotation with supported alternatives. Replay a difficult season under hotter, drier or wetter conditions. Clear explanations show the evidence, trade-offs and missing information, helping farmers decide what to investigate locally before changing their rotation.
+
+## Seven-slide demo outline
+
+1. TerraRoute and the farmer's rotation-planning question.
+2. Why soil, water, timing and practical constraints belong in one decision.
+3. NASA POWER and MODIS evidence, plus farmer inputs and their coverage limits.
+4. Enter an Iowa corn/soybean example and inspect vulnerable periods.
+5. Compare three options; change a constraint and explain an exclusion.
+6. Run a historical what-if scenario; show assumptions and uncertainty.
+7. Outcome, limitations, source attribution and public project links.
+
+## Deployment entry point
+
+Use `Crop_Protection_Tool/map_app.py` when the project folder sits inside the repository, or `map_app.py` when its contents are at the repository root. The older `app.py` instruction does not apply to the current TerraRoute app.
