@@ -1,0 +1,5 @@
+target,selected_model,test_MAE,baseline_MAE,skill_vs_baseline,test_band_coverage,test_months,validation_band_halfwidth,interpretation
+tmax_mean_c,Seasonal average,2.18259544894264,2.18259544894264,0.0,0.875,48,4.093387096774194,No added skill over seasonal baseline
+rain_mm,Season + trend,25.72230723637581,27.527429759552046,0.06557541110607534,0.9375,48,62.29451361213382,Added skill observed on test years
+hot_days,Season + trend,0.5654739457025487,0.5208884261873393,-0.08559514336218732,0.8541666666666666,48,1.9512719174081699,No added skill over seasonal baseline
+max_dry_run,Seasonal average,3.4374796097622187,3.4374796097622187,0.0,0.9375,48,9.375,No added skill over seasonal baseline

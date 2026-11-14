@@ -1,0 +1,16 @@
+# TerraRoute — submission draft
+
+TerraRoute is an interactive rotation-exploration prototype combining supplied temperature records attributed to NASA with an Ames NASA POWER and MODIS demonstration. Farmers choose a supported grid location, enter local soil information, intended crops, water access, equipment and market constraints, and priorities. They compare the current rotation with cover-crop and diversification options that retain their desired crops across the sequence. Rule-based notes expose water-use trade-offs, unknown soil conditions and feasibility constraints. NASA climate and vegetation evidence provides environmental context; potential soil benefits are supported by cited extension guidance, not measured or forecast by the model.
+
+This matters because adding a crop or cover can create soil-cover opportunities while adding water demand, equipment needs or market risks. Showing those trade-offs helps farmers form a focused plan for local review. The tool supports farmer judgement and does not guarantee suitability, yield, soil improvement or future forecast accuracy.
+
+Implemented: interactive state/grid map from the uploaded workbook; historical summer-temperature comparison; explicit soil/crop/priority inputs; three conditional strategy cards; comparison CSV export; separate Ames daily-weather and quality-filtered vegetation panel; optional local Ollama questions; source register. The supplied temperature workbook lacks original export metadata, so NASA provenance and inferred monthly schema/units must be confirmed before final scientific claims. No verified soil map or farm boundary is bundled.
+
+AI assistance: concept exploration, code and draft text used ChatGPT/Codex. Optional chat uses a user-installed Ollama model. No generated observations are used as environmental data. Disclose all assistance according to the current event rules.
+
+Suggested demo: choose Iowa/Ames; show historical summer-temperature context; enter rainfed, sandy soil and soil-cover priority; compare three cards; set no confirmed market and show the diversification constraint; show the Ames evidence separately; save the decision table. Public deployment or a public video/slides link is still required for submission.
+
+## Updated end-to-end journey
+TerraRoute collects farm and soil inputs, displays actual data coverage, identifies potential vulnerable periods, compares the current rotation with two source-linked alternatives, and runs transparent hotter/drier/wetter what-if tests. It explains trade-offs, assumptions and gaps beside each result. For the Iowa corn/soybean example, candidates include cereal rye after corn before soybean and a small-grain/red-clover diversification sequence, supported by cited extension guidance and an Iowa field study. For other regions these remain unverified categories needing local review. Scenario exposure differences come from weather perturbations and explicit crop-calendar assumptions, not a crop physiology or soil-health model.
+
+Soil-moisture observations are unavailable and visibly marked. Regional temperatures, Ames rainfall and one 2024 vegetation pixel have different scales and time ranges; coverage is never extended by pretending they describe every selected field.
