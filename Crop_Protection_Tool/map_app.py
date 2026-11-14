@@ -402,4 +402,4 @@ P.__chatTimer=setInterval(()=>{
 },300);
 </script>''',height=0)
 with st.expander('Full sources and methods'):st.markdown((ROOT/'SOURCES.md').read_text())
-st.caption('TerraRoute prototype. NASA environmental observations support local decisions; local crop/soil validation remains necessary. AI assistance disclosed in SOURCES.md.')
+st.markdown('<p style="text-align:center;color:#4f5f55;font-size:14px;margin-top:1.5rem">TerraRoute prototype. NASA environmental observations support local decisions; local crop/soil validation remains necessary. AI assistance disclosed in SOURCES.md.</p>',unsafe_allow_html=True)
