@@ -369,7 +369,8 @@ const old=D.getElementById("chat-style");if(old)old.remove();
 const css=D.createElement("style");css.id="chat-style";
 css.textContent=`.st-key-chatbubble{position:fixed!important;left:14px;bottom:28px;width:54px;height:54px;z-index:999998}
 .st-key-chatbubble [data-testid="stPopover"]{width:54px}
-.st-key-chatbubble [data-testid="stPopover"]>button,.st-key-chatbubble [data-testid="stPopoverButton"]{width:54px;height:54px;min-height:54px;padding:0;border-radius:50%;background:#2e9e6b!important;border:none!important;color:#fff;font-size:24px;box-shadow:0 6px 20px rgba(24,75,56,.3);transition:transform .15s ease}
+.st-key-chatbubble [data-testid="stPopover"]>button,.st-key-chatbubble [data-testid="stPopoverButton"]{width:54px;height:54px;min-height:54px;padding:0;border-radius:50%;background:#fff url(https://i.imgur.com/4NhKhEe.png) center/68% no-repeat!important;border:2px solid #2e9e6b!important;font-size:0!important;box-shadow:0 6px 20px rgba(24,75,56,.3);transition:transform .15s ease}
+.st-key-chatbubble [data-testid="stPopover"]>button *{font-size:0!important;color:transparent!important}
 .st-key-chatbubble [data-testid="stPopover"]>button:hover,.st-key-chatbubble [data-testid="stPopoverButton"]:hover{transform:scale(1.12)}
 .st-key-chatbubble [data-testid="stPopover"]>button svg,.st-key-chatbubble [data-testid="stPopoverButton"] svg,.st-key-chatbubble [data-testid="stIconMaterial"]{display:none}
 .chatbadge{position:fixed;left:52px;bottom:66px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:#e53935;color:#fff;font:700 12px/20px sans-serif;text-align:center;z-index:999999;pointer-events:none}
