@@ -23,6 +23,20 @@ st.set_page_config(page_title='TerraRoute',page_icon='🌱',layout='wide')
 st.markdown('''<style>@keyframes logofade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}[data-testid="stImage"] img{animation:logofade 1.6s ease-out}.stApp{background:#f4f7f1}.block-container{max-width:1350px;padding-top:4rem}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
 st.components.v1.html('''<script>
 const P=window.parent,D=P.document;
+if(!P.sessionStorage.getItem("tr-intro")&&!D.getElementById("tr-intro")){
+    P.sessionStorage.setItem("tr-intro","1");
+    const css=D.createElement("style");
+    css.textContent="#tr-intro{position:fixed;inset:0;z-index:9999999;background:#f4f7f1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;transition:opacity .7s ease}#tr-intro img{width:min(340px,70vw);animation:trpulse 1.6s ease-in-out infinite}#tr-intro .bar{width:min(220px,50vw);height:4px;border-radius:2px;background:#dce7d8;overflow:hidden}#tr-intro .bar i{display:block;height:100%;width:40%;border-radius:2px;background:#2e9e6b;animation:trslide 1.2s ease-in-out infinite}@keyframes trpulse{0%,100%{opacity:.55;transform:scale(.97)}50%{opacity:1;transform:scale(1)}}@keyframes trslide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}";
+    D.head.appendChild(css);
+    const o=D.createElement("div");o.id="tr-intro";
+    o.innerHTML='<img src="https://i.imgur.com/k28tRZs.png"><div class="bar"><i></i></div>';
+    D.body.appendChild(o);
+    setTimeout(()=>{o.style.opacity="0";setTimeout(()=>o.remove(),800);},2200);
+    setTimeout(()=>{const x=D.getElementById("tr-intro");if(x)x.remove();},6000);
+}
+</script>''',height=0)
+st.components.v1.html('''<script>
+const P=window.parent,D=P.document;
 ["tr-rail","tr-rail-style"].forEach(i=>{const o=D.getElementById(i);if(o)o.remove();});
 if(P.__trSpy)D.removeEventListener("scroll",P.__trSpy,true);
 const items=[["location","1","Your Farm"],["history","2","Crop History"],["weather","3","Weather & Water"],["compare","4","Rotation Choices"],["whatif","5","Hotter, Drier or Wetter"],["insights","6","Download Insights"]];
