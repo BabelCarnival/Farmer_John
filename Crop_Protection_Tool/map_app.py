@@ -90,7 +90,7 @@ nearest=int(((g.lat-42.03)**2+(g.lon+93.62)**2).idxmin()) if state=='IOWA' else 
 point_key='grid_choice_'+state
 if point_key not in st.session_state:st.session_state[point_key]=nearest
 point=st.selectbox('Grid cell (also selectable on the map)',range(len(g)),key=point_key,format_func=lambda i:f'{g.iloc[i].lat:.3f}, {g.iloc[i].lon:.3f}')
-color=st.radio('Colour the map by',['Recent summer temperature','Change between two periods'],horizontal=True)
+color=st.radio('Colour the map by',['Recent summer temperature','Change between two periods'],horizontal=True,help='Smooth shading is an inverse-distance visualisation between sampled points, not additional observations or field-scale precision. Click the map or use the grid selector for an original value. Colour is clipped to the selected Census state outline; distant unsampled areas stay transparent. Background tiles require internet.')
 field='recent_c' if color=='Recent summer temperature' else 'change_c'
 map_key='temperature_cells_'+state+'_'+field
 fig=px.choropleth_map(g,geojson=grid_geojson(g),locations='point_id',featureidkey='id',color=field,
@@ -123,21 +123,18 @@ def choose_cell():
         if matches:st.session_state[point_key]=int(matches[0])
 st.plotly_chart(fig,width='stretch',key=map_key,on_select=choose_cell,selection_mode='points')
 selected=g.iloc[st.session_state[point_key]]
-st.caption('Smooth shading is an inverse-distance visualisation between sampled points, not additional observations or field-scale precision. Click the map or use the grid selector for an original value. Colour is clipped to the selected Census state outline; distant unsampled areas stay transparent. Background tiles require internet.')
 a,b,c=st.columns(3)
 a.metric('Selected point',f'{selected.lat:.2f}, {selected.lon:.2f}')
 b.metric('Recent summer mean temperature',f'{selected.recent_c:.1f}°C')
-c.metric('Difference between periods',f'{selected.change_c:+.1f}°C')
-st.caption('Historical comparison, not a forecast or an attribution of cause. Summer means June–August.')
+c.metric('Difference between periods',f'{selected.change_c:+.1f}°C',help='Historical comparison, not a forecast or an attribution of cause. Summer means June–August.')
 site=raw[(raw.state==state)&raw.lat.eq(selected.lat)&raw.lon.eq(selected.lon)].sort_values('year')
 with st.expander('See this point’s temperature history'):
     st.plotly_chart(px.line(site,x='year',y='summer_c',markers=True,labels={'summer_c':'Jun–Aug mean T2M (°C)','year':'Year'}),width='stretch')
 
-st.subheader('2. Crop History',anchor='history')
-mode=st.radio('Detailed evidence location',['Sample farm (Ames, Iowa)','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True)
+st.subheader('2. Crop History',anchor='history',help='Enter real crop dates. The sample dates are illustrative until you replace them. Weather risk windows are calculated from these dates; actual physiological stages still require field confirmation. Results update when inputs change. Crop dates identify growing-month coverage, not confirmed crop stages or bare soil; retained residues and unrecorded cover can protect calendar gaps.')
+mode=st.radio('Detailed evidence location',['Sample farm (Ames, Iowa)','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True,help='The sample farm describes 42.03, −93.62 in Ames, Iowa, not every point on the regional map.')
 if mode=='Sample farm (Ames, Iowa)':
     latitude,longitude=42.03,-93.62
-    st.caption('Detailed evidence below describes 42.03, −93.62, not every point on the regional map.')
 else:
     a,b=st.columns(2)
     latitude=a.number_input('Farm latitude',-90.,90.,float(selected.lat),format='%.4f')
@@ -145,7 +142,6 @@ else:
 inside_state=bool(polygon_mask(np.array([longitude]),np.array([latitude]),state_geometry)[0])
 if not inside_state:st.warning('These coordinates lie outside the selected state outline. Regional crop options will not be transferred to them. Daily NASA point data can still be loaded.')
 crop=st.selectbox('Main crop you intend to grow',['Corn','Soybean','Wheat','Rice','Sorghum','Other'])
-st.caption('Enter real crop dates. These sample dates are illustrative until you replace them. Weather risk windows will be calculated from these dates; actual physiological stages still require field confirmation.')
 default_history=pd.DataFrame({'Crop':['Corn','Soybean'],'Planting date':[date(2023,5,1),date(2024,5,1)],'Harvest date':[date(2023,10,1),date(2024,10,1)]})
 edited=st.data_editor(default_history,num_rows='dynamic',hide_index=True,width='stretch',key='crop_history_editor',column_config={'Crop':st.column_config.SelectboxColumn(options=['Corn','Soybean','Wheat','Rice','Sorghum','Oats','Red clover','Other'],required=True),'Planting date':st.column_config.DateColumn(required=True),'Harvest date':st.column_config.DateColumn(required=True)})
 try:crop_history,growing_months,gap_months=parse_history(edited)
@@ -163,9 +159,8 @@ with b:
     market=st.selectbox('Added-crop market or forage outlet',['Unknown','No confirmed outlet','Confirmed market or forage use'])
     cover_feasible=st.selectbox('Can establish and terminate a cover crop?',['Unknown','Yes','No'])
 profile=dict(crop=crop,sequence=sequence,crop_history=crop_history,region=state if inside_state else 'Unverified',texture=texture,drainage=drainage,soil_source=soil_source or 'Not supplied',water=water,priorities=priorities,equipment=equipment,market=market,cover_feasible=cover_feasible,sensitive_months=growing_months,bare_months=gap_months,latitude=latitude,longitude=longitude)
-st.caption('Results update on input changes. Crop dates identify growing-month coverage, not confirmed crop stages or bare soil; retained residues and unrecorded cover can protect calendar gaps.')
 
-st.subheader('3. Weather & Water',anchor='weather')
+st.subheader('3. Weather & Water',anchor='weather',help='Soil wetness is modelled by NASA, not measured in your field, and is not automatically equivalent to volumetric water content. Check the units in the downloaded NASA metadata.')
 @st.cache_data(ttl=86400,show_spinner=False)
 def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,True)
 near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
@@ -194,7 +189,6 @@ if bundle:
     wet=[c for c in ['GWETTOP','GWETROOT'] if c in daily and daily[c].notna().any()]
     if wet:
         st.plotly_chart(px.line(daily,x='date',y=wet,render_mode='svg',title='NASA modelled soil-wetness indices (not field moisture measurements)'),width='stretch')
-        st.caption('Use units in the downloaded NASA metadata. Wetness fractions are not automatically equivalent to volumetric water content.')
     with st.expander('Data provenance, units and missing values'):
         st.json(bundle['metadata']);st.write(daily.isna().sum().to_dict())
         st.download_button('Download normalised NASA point data',daily.to_csv(index=False),'NASA_point_daily.csv','text/csv')
@@ -204,10 +198,9 @@ if bundle:
         st.plotly_chart(px.bar(monthly,x='date',y='precip_mm',labels={'precip_mm':'Monthly precipitation total (mm)','date':'Date'}),width='stretch')
         st.caption('Monthly summaries make long records readable. All stress-test calculations still use daily observations; missing daily values are not filled.')
 
-st.subheader('Periods Needing Closer Attention')
+st.subheader('Periods Needing Closer Attention',help='The growing-month union is a screening approximation across the entered crop history. It does not infer phenology, yield response or exposed soil from dates alone. Periods are ranked within the replay year by heat-day and rainfall-gap exposure during the entered growing season. These are not automatically critical physiological stages. 35°C and under 1 mm per day are screening settings, not crop-damage thresholds.')
 st.write('Growing months from entered dates: '+', '.join(calendar.month_abbr[m] for m in growing_months))
 st.write('Calendar gaps to verify for soil cover: '+(', '.join(calendar.month_abbr[m] for m in gap_months) or 'None identified'))
-st.caption('The growing-month union is a screening approximation across the entered crop history. It does not infer phenology, yield response or exposed soil from dates alone.')
 year=None;window_table=None
 if daily is not None:
     annual=annual_exposure(daily,growing_months);eligible=annual[annual.coverage>=.95]
@@ -221,7 +214,6 @@ if daily is not None:
         focus['screen_rank']=focus['Heat days ≥35°C'].rank(pct=True)+focus['Longest rainfall gap (days)'].rank(pct=True)
         top=focus.nlargest(min(3,len(focus)),'screen_rank')
         st.write('Weather periods to inspect first: '+', '.join(calendar.month_abbr[int(m)] for m in top.Month))
-        st.caption('Ranked within this replay year by heat-day and rainfall-gap exposure during the entered growing season. These are not automatically critical physiological stages. 35°C and <1 mm/day are screening settings, not crop-damage thresholds.')
         st.plotly_chart(px.bar(window_table,x='Month',y='Longest rainfall gap (days)',color='Within entered crop season',labels={'Month':'Month','Within entered crop season':'Inside your crop calendar'}),width='stretch')
         with st.expander('See monthly heat and rainfall values'):
             st.dataframe(window_table.round(1),hide_index=True,width='stretch')
@@ -275,8 +267,8 @@ for offset in range(0,len(options),3):
                 for key in c['source']:st.markdown('['+REFERENCES[key]['note']+']('+REFERENCES[key]['url']+')')
                 if not c['source']:st.write('Your entered crop history; no change assumed.')
 
-st.markdown('#### The practical differences')
-comparison=[]
+st.markdown('#### The practical differences',help='These describe the proposed management changes. They are not measured benefits or a percentage chance of success. NASA weather exposure is checked separately in Step 5.')
+ccomparison=[]
 for c in options:
     kind=c['id']
     comparison.append({'Option':c['name'],
@@ -285,7 +277,6 @@ for c in options:
         'Extra work': 'No system change proposed' if kind=='current' else 'Sow and terminate rye' if kind=='cover' else 'More crop operations; check machinery',
         'Water': 'Not calculated' if kind=='current' else 'Living cover uses water; timing matters'})
 st.table(pd.DataFrame(comparison).set_index('Option'))
-st.caption('These describe the proposed management changes. They are not measured benefits or a percentage chance of success. NASA weather exposure is checked separately in Step 5.')
 with st.expander('Local checks and comparison method'):
     for note in shared_notes:st.write(note)
     st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue currently covers Iowa corn/soybean systems only.')
@@ -298,19 +289,17 @@ if daily is not None and year is not None:
     delta=2. if scenario=='Hotter +2°C' else 0.;factor=.8 if scenario=='Drier −20%' else 1.2 if scenario=='Wetter +20%' else 1.
     if scenario=='Custom':
         delta=st.slider('Temperature offset (°C)',-2.,5.,2.,.5);factor=st.slider('Rainfall percentage',50,150,80,5)/100
-    cover_months=st.multiselect('Assumed cover months for alternative options (confirm locally)',range(1,13),[3,4,10,11],format_func=lambda m:calendar.month_abbr[m])
-    plans=[{'name':c['name'],'sensitive':growing_months,'bare':gap_months if c['id']=='current' else [m for m in gap_months if m not in cover_months]} for c in options]
+cover_months=st.multiselect('Assumed cover months for alternative options (confirm locally)',range(1,13),[3,4,10,11],format_func=lambda m:calendar.month_abbr[m],help='The chart below shows rainfall that falls in months you assume are uncovered. Lower values reflect this calendar assumption only; they do not measure reduced erosion, water savings or cover-crop success. Cover months have not been inferred from NASA data.')
+plans=[{'name':c['name'],'sensitive':growing_months,'bare':gap_months if c['id']=='current' else [m for m in gap_months if m not in cover_months]} for c in options]
     scenario_settings={'historical_year':int(year),'temperature_offset_c':delta,'rainfall_multiplier':factor,'assumed_cover_months':cover_months,'calendar_plans':plans}
     base=compare(daily,plans,year,35,1);altered=daily.copy();altered['tmax_c']+=delta;altered['precip_mm']*=factor
     result=compare(altered,plans,year,35,1)
     scenario_result=pd.DataFrame({'Strategy':result.strategy,'Baseline heat days':base.heat_days,'Scenario heat days':result.heat_days,'Baseline dry run (days)':base.dry_spell_days,'Scenario dry run (days)':result.dry_spell_days,'Baseline rain in calendar gaps (mm)':base.bare_rain_mm,'Scenario rain in assumed uncovered months (mm)':result.bare_rain_mm})
     a,b=st.columns(2)
-    a.metric('Hot days inside your crop calendar',f'{int(result.heat_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.heat_days.iloc[0]-base.heat_days.iloc[0]):+d} days vs historical')
-    b.metric('Longest rainfall gap inside your crop calendar',f'{int(result.dry_spell_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.dry_spell_days.iloc[0]-base.dry_spell_days.iloc[0]):+d} days vs historical')
-    st.caption(f'Replaying {year}. Hot day: maximum temperature ≥35°C. Rainfall gap: consecutive days below 1 mm. The crop calendar is shared across these options, so these weather counts are shown once.')
+    a.metric('Hot days inside your crop calendar',f'{int(result.heat_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.heat_days.iloc[0]-base.heat_days.iloc[0]):+d} days vs historical',help=f'Replaying {year}. A hot day is a day with a maximum temperature of 35°C or more. The crop calendar is shared across these options, so these weather counts are shown once.')
+    b.metric('Longest rainfall gap inside your crop calendar',f'{int(result.dry_spell_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.dry_spell_days.iloc[0]-base.dry_spell_days.iloc[0]):+d} days vs historical',help=f'Replaying {year}. A rainfall gap is a run of consecutive days with under 1 mm of rain.')
     cover_chart=pd.DataFrame({'Strategy':result.strategy,'Rain during assumed uncovered months (mm)':result.bare_rain_mm})
     st.plotly_chart(px.bar(cover_chart,x='Strategy',y='Rain during assumed uncovered months (mm)',color_discrete_sequence=['#287554']),width='stretch')
-    st.caption('This chart shows rainfall coinciding with your assumed uncovered months. Lower values reflect the calendar assumption only; they do not measure reduced erosion, water savings or cover-crop success. Cover months have not been inferred from NASA data.')
     if scenario=='Historical':st.info('Historical replay: no weather change is applied. Select Hotter, Drier or Wetter to compare a changed scenario.')
     with st.expander('Compare the detailed numbers'):
         shown=scenario_result if scenario!='Historical' else scenario_result[['Strategy','Baseline heat days','Baseline dry run (days)','Baseline rain in calendar gaps (mm)']]
