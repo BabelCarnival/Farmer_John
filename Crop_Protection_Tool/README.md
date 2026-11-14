@@ -45,3 +45,7 @@ The public app includes a deterministic report helper with four question buttons
 
 ### Updating an existing deployment
 Replace `map_app.py` and add `report_help.py` in the same `Crop_Protection_Tool` directory in your existing repository. Commit and push both files. Keep the Streamlit entry point `Crop_Protection_Tool/map_app.py`. The archive also includes the updated README and sources disclosure.
+
+
+## Step 4 plain-language comparison
+The large 0–100 preference chart has been removed. Cards now explain how each option relates to the selected priorities. A compact comparison table describes cover, diversity, work and water trade-offs. Excluded options have explicit reasons. Internal catalogue weights only order alternatives and remain disclosed in the method and technical report; they are not probabilities, NASA-derived benefits or suitability scores. No environmental datasets or scientific claims were added.

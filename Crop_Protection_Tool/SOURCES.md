@@ -111,3 +111,7 @@ New data_access.py handles retrieval, analysis_v2.py derives calendar/weather sc
 
 ## Farmer interface and report helper update
 No new environmental datasets were added by this interface update. Daily NASA observations still drive calculations. Long weather-history plots now aggregate to monthly means of daily maximum temperature and monthly rain totals for readability; the underlying daily data are downloadable. The report helper is deterministic Python text selection from current report fields, not an AI model, forecast or new scientific source. Optional Ollama explanations remain AI-generated. AI assistance was used to develop this interface and helper code. Technical comparison attributes and assumptions remain available in collapsed sections and the JSON report.
+
+
+## Step 4 plain-language comparison
+The large 0–100 preference chart has been removed. Cards now explain how each option relates to the selected priorities. A compact comparison table describes cover, diversity, work and water trade-offs. Excluded options have explicit reasons. Internal catalogue weights only order alternatives and remain disclosed in the method and technical report; they are not probabilities, NASA-derived benefits or suitability scores. No environmental datasets or scientific claims were added.

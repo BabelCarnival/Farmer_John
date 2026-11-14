@@ -193,9 +193,26 @@ else:st.caption('Vegetation data have not been supplied for these coordinates. T
 
 st.subheader('4. Compare rotation choices for your farm')
 options,blocked,gaps,weights=recommend(profile)
-for msg in gaps:st.warning(msg)
-for item in blocked:st.warning('Excluded: '+item['option']+' — '+item['reason'])
-if len(options)<3:st.info(f'{len(options)} supported option(s) remain. The tool will not fabricate three feasible rotations when local evidence or constraints rule them out.')
+st.write('Compare what changes on your farm, then use Step 5 to check weather exposure.')
+for msg in gaps:st.info(msg)
+if blocked:
+    with st.expander(f'Why {len(blocked)} option(s) were left out',expanded=True):
+        for item in blocked:st.write('**'+item['option']+'** — '+item['reason'])
+if len(options)<3:st.caption(f'{len(options)} option(s) available with your current inputs. Options needing unsupported local evidence or conflicting with your constraints are left out.')
+
+def priority_explanation(candidate):
+    notes=[]
+    current=candidate['id']=='current'
+    if 'Improve soil cover' in priorities:
+        notes.append('Keeps existing cover practices; check gaps and residues.' if current else 'Adds an opportunity for living cover; establishment must be confirmed.')
+    if 'Diversify the sequence' in priorities:
+        notes.append('Keeps your current crop mix.' if current else 'Adds rye between cash crops.' if candidate['id']=='cover' else 'Adds a small grain and red clover to the cycle.')
+    if 'Limit added work/equipment' in priorities:
+        notes.append('No crop-system change proposed.' if current else 'Adds sowing and termination tasks.' if candidate['id']=='cover' else 'Needs more crop operations and equipment or a contractor.')
+    if 'Conserve water' in priorities:
+        notes.append('Water savings have not been established.' if current else 'Living cover uses water; review moisture and termination timing.')
+    return notes or ['Select a priority in Step 1 to see the relevant trade-offs.']
+
 shared_notes=[]
 for c in options:
     for text in [c['priority_note'],c['soil_note']]:
@@ -203,25 +220,35 @@ for c in options:
 for offset in range(0,len(options),3):
     for column,c in zip(st.columns(min(3,len(options)-offset)),options[offset:offset+3]):
         with column,st.container(border=True):
+            st.caption('YOUR CURRENT APPROACH' if c['id']=='current' else 'ALTERNATIVE TO EXPLORE')
             st.markdown('### '+c['name'])
-            st.write('**Crop sequence:** '+c['sequence'])
-            st.write('**Potential benefit:** '+('Keep your current approach as the comparison point.' if c['id']=='current' else 'Explore extra living cover between cash crops.' if c['id']=='cover' else 'Explore a different crop family and a longer rotation.'))
-            st.write('**Trade-off:** '+c['risk'])
-            st.write('**Next step:** '+('Confirm current residue cover and uncovered months.' if c['id']=='current' else 'Check rye establishment and termination dates locally.' if c['id']=='cover' else 'Confirm equipment, crop timing and a market or forage use.'))
+            st.write('**Crop sequence**')
+            st.write(c['sequence'])
+            st.write('**What changes**')
+            st.write('Keep your current crop system as the comparison point.' if c['id']=='current' else 'Plant cereal rye after corn, before soybean; confirm establishment and termination locally.' if c['id']=='cover' else 'Extend the cycle with a small grain and red clover; confirm a local crop calendar and outlet.')
+            st.write('**For your priorities**')
+            for note in priority_explanation(c):st.write('• '+note)
+            st.write('**Main trade-off:** '+c['risk'])
+            st.write('**Before trying it:** '+('Confirm current residue cover and uncovered months.' if c['id']=='current' else 'Check seed, sowing access, soil moisture and termination timing.' if c['id']=='cover' else 'Confirm machinery, crop timing and a market or forage use.'))
             with st.expander('Supporting evidence'):
                 for key in c['source']:st.markdown('['+REFERENCES[key]['note']+']('+REFERENCES[key]['url']+')')
                 if not c['source']:st.write('Your entered crop history; no change assumed.')
-with st.expander('What still needs checking on your farm'):
+
+st.markdown('#### The practical differences')
+comparison=[]
+for c in options:
+    kind=c['id']
+    comparison.append({'Option':c['name'],
+        'Soil cover': 'Existing practices' if kind=='current' else 'Cover between cash crops' if kind=='cover' else 'Longer cycle with additional cover',
+        'Crop diversity': 'Your current mix' if kind=='current' else 'Rye added between crops' if kind=='cover' else 'Small grain and clover added',
+        'Extra work': 'No system change proposed' if kind=='current' else 'Sow and terminate rye' if kind=='cover' else 'More crop operations; check machinery',
+        'Water': 'Not calculated' if kind=='current' else 'Living cover uses water; timing matters'})
+st.table(pd.DataFrame(comparison).set_index('Option'))
+st.caption('These describe the proposed management changes. They are not measured benefits or a percentage chance of success. NASA weather exposure is checked separately in Step 5.')
+with st.expander('Local checks and comparison method'):
     for note in shared_notes:st.write(note)
-scored=pd.DataFrame([{'Strategy':c['name'],'Match to selected planning priorities':c['score']} for c in options])
-if scored['Match to selected planning priorities'].notna().any():
-    st.plotly_chart(px.bar(scored,x='Match to selected planning priorities',y='Strategy',orientation='h',range_x=[0,100],color_discrete_sequence=['#287554']),width='stretch')
-    st.caption('A planning comparison, not a prediction of yield, water savings or soil-health improvement. Equal scores mean the selected priorities do not distinguish these options.')
-    with st.expander('How this planning comparison is calculated'):
-        st.write('Cover opportunity, crop diversity and ease of implementation each receive 0, 1 or 2 points. Your selected priorities give the matching attributes equal weight. The displayed index scales the weighted total to 0–100. Water conservation is not scored from these data.')
-        labels={'cover_opportunity':'Soil-cover opportunity','diversity_opportunity':'Crop diversity','implementation_ease':'Ease of implementation'}
-        st.dataframe(pd.DataFrame([{'Planning attribute':labels[k],'Selected':bool(v)} for k,v in weights.items()]),hide_index=True,width='stretch')
-        st.dataframe(pd.DataFrame([{'Strategy':c['name'],**{labels[k]:c[k] for k in labels}} for c in options]),hide_index=True,width='stretch')
+    st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue currently covers Iowa corn/soybean systems only.')
+    st.write('For ordering alternatives, selected cover, diversity and work priorities have equal weights on catalogue attributes coded 0–2. This is a planning heuristic, not validated agronomic suitability. Water savings are not scored. The internal values remain in the technical report for transparency; they are not shown as a farmer recommendation percentage.')
 
 st.subheader('5. Try hotter, drier or wetter conditions')
 scenario_result=None;scenario_settings=None

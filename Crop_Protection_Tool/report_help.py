@@ -44,6 +44,6 @@ def answer_report_question(question, report):
         excluded = report.get('excluded', [])
         if excluded:
             text += '\n\n**Excluded:** ' + '; '.join(f"{o['option']} — {o['reason']}" for o in excluded)
-        return text + '\n\nThe planning index reflects selected priorities, not proven suitability or predicted outcomes. Alternatives currently have reviewed examples only for Iowa corn/soybean systems.'
+        return text + '\n\nThe comparison describes management changes and selected priorities, not proven suitability or predicted outcomes. Alternatives currently have reviewed examples only for Iowa corn/soybean systems.'
     return ('I am the **report helper**, not an open-ended AI model. I can explain your rotation options, weather stress test, information gaps and sources. '
             'Choose one of the four question buttons above. For broader questions, connect Ollama on the computer running the app.')
