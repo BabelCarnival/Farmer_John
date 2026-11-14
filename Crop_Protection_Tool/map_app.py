@@ -24,7 +24,7 @@ st.markdown('''<style>.stApp{background:#f4f7f1}.block-container{max-width:1350p
 with st.sidebar:
     st.markdown('### Sections')
     st.markdown('[1. Location](#location)  \n[2. Farm & crop history](#history)  \n[3. Weather & water](#weather)  \n[4. Compare rotations](#compare)  \n[5. What-if & report](#whatif)')
-st.image('https://i.imgur.com/1WlOmTC.png', width=400)
+st.image('https://i.imgur.com/k28tRZs.png', width=400)
 st.write('Explore rotation choices for your crops, soil and priorities')
 
 @st.cache_data
