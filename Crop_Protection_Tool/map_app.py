@@ -126,7 +126,8 @@ with b:
 profile=dict(crop=crop,sequence=sequence,crop_history=crop_history,region=state if inside_state else 'Unverified',texture=texture,drainage=drainage,soil_source=soil_source or 'Not supplied',water=water,priorities=priorities,equipment=equipment,market=market,cover_feasible=cover_feasible,sensitive_months=growing_months,bare_months=gap_months,latitude=latitude,longitude=longitude)
 st.caption('Results update on input changes. Crop dates identify growing-month coverage, not confirmed crop stages or bare soil; retained residues and unrecorded cover can protect calendar gaps.')
 
-st.subheader('2. Understand your weather and water conditions',anchor='weather')@st.cache_data(ttl=86400,show_spinner=False)
+st.subheader('2. Understand your weather and water conditions',anchor='weather')
+@st.cache_data(ttl=86400,show_spinner=False)
 def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,True)
 near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
 bundle=None
