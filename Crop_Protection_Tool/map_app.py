@@ -16,7 +16,7 @@ from map_layers import polygon_mask
 from datetime import date
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from option_indicators import indicators,colour_map,strip_html,option_calendar
+from option_indicators import stress_test,stress_verdict,indicators,colour_map,strip_html,option_calendar
 from climate import monthly_climatology,heat_days_by_month,risk_calendar,takeaways
 from exposure import load_daily, history, load_modis
 from ollama_chat import installed_models, ask
@@ -354,6 +354,20 @@ if daily is not None and year is not None:
     b.metric('Longest rainfall gap inside your crop calendar',f'{int(result.dry_spell_days.iloc[0])} days',None if scenario=='Historical' else f'{int(result.dry_spell_days.iloc[0]-base.dry_spell_days.iloc[0]):+d} days vs historical',help=f'Replaying {year}. A rainfall gap is a run of consecutive days with under 1 mm of rain.')
     cover_chart=pd.DataFrame({'Strategy':result.strategy,'Rain during assumed uncovered months (mm)':result.bare_rain_mm})
     st.plotly_chart(px.bar(cover_chart,x='Strategy',y='Rain during assumed uncovered months (mm)',color_discrete_sequence=['#287554']),width='stretch')
+    st.markdown('#### What this means for each option')
+    scen_name='today\'s weather' if scenario=='Historical' else scenario if scenario!='Custom' else f'{delta:+.1f} °C and rain ×{factor:.2f}'
+    stress,why=stress_test(options,crop_history,daily,delta,factor)
+    if stress is None:st.info(why)
+    else:
+        from climate import month_range
+        fmt=lambda b,s:f'{b:.0f}' if scenario=='Historical' else f'{b:.0f} → {s:.0f}'
+        mfmt=lambda b,s:(month_range(s) or 'none')+('' if scenario=='Historical' or b==s else f' (was {month_range(b) or "none"})')
+        st.dataframe(pd.DataFrame({'Option':stress.Option,'Rain on bare soil (mm/yr)':[fmt(a,b) for a,b in zip(stress.bare_rain_base,stress.bare_rain_scen)],
+            'Dry months while crops grow':[mfmt(a,b) for a,b in zip(stress.dry_base,stress.dry_scen)],
+            'Frost-likely months for the new crop':[mfmt(a,b) if o!='current' else '–' for a,b,o in zip(stress.frost_base,stress.frost_scen,[c['id'] for c in options])]}),hide_index=True,width='stretch')
+        verdict=stress_verdict(stress,scen_name);st.success(verdict)
+        st.caption('Calculated from NASA POWER daily data with the scenario applied (temperature shift, rain factor, evaporative demand recalculated). Dry = rain under half of evaporative demand. Frost-likely = frost in half or more of years (check the crop tolerates frost). A sensitivity test, not a forecast.')
+        scenario_settings['option_stress_test']={'verdict':verdict,'table':stress.drop(columns=['added']).to_dict('records')}
     if scenario=='Historical':st.info('Historical replay: no weather change is applied. Select Hotter, Drier or Wetter to compare a changed scenario.')
     with st.expander('Compare the detailed numbers'):
         shown=scenario_result if scenario!='Historical' else scenario_result[['Strategy','Baseline heat days','Baseline dry run (days)','Baseline rain in calendar gaps (mm)']]

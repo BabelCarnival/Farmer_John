@@ -72,3 +72,42 @@ def strip_html(cal,colours):
         if cal[m] not in used:used.append(cal[m])
     legend=' '.join(f'<span style="font:12px sans-serif;margin-right:8px"><span style="display:inline-block;width:10px;height:10px;background:{colours[u]};margin-right:3px"></span>{u}</span>' for u in used)
     return f'<div style="display:flex;border-radius:6px;overflow:hidden;margin:4px 0">{cells}</div><div>{legend}</div>'
+
+
+def stress_test(options,crop_history,daily,delta=0.,factor=1.):
+    """Compare each option under a scenario using climatology recomputed from shifted daily data
+    (temperature + delta, rain x factor, ET0 recomputed). Returns (DataFrame, verdict) or (None, reason)."""
+    from climate import monthly_climatology,month_range
+    need=['tmean_c','tmin_c','solar_mj']
+    if any(c not in daily or daily[c].notna().sum()==0 for c in need):
+        return None,'Option stress test needs NASA temperature and sunlight data; load them in Step 3.'
+    alt=daily.copy()
+    for col in ['tmean_c','tmin_c','tmax_c']:alt[col]=alt[col]+delta
+    alt['precip_mm']=alt['precip_mm']*factor
+    base=monthly_climatology(daily).set_index('month');sc=monthly_climatology(alt).set_index('month')
+    rows=[]
+    for o in options:
+        cal,added=option_calendar(o,crop_history)
+        bare=[m for m in range(1,13) if cal[m]=='bare'];living=[m for m in range(1,13) if cal[m]!='bare']
+        r={'Option':o['name'],'Months with cover':len(living)}
+        for tag,c in [('base',base),('scen',sc)]:
+            r[f'bare_rain_{tag}']=float(c.rain_mm[bare].sum()) if bare else 0.
+            r[f'dry_{tag}']=[m for m in living if c.deficit[m]]
+            r[f'frost_{tag}']=[m for m in added if c.frost_year_share[m]>=.5]
+        r['added']=added;rows.append(r)
+    return pd.DataFrame(rows),None
+
+
+def stress_verdict(table,name):
+    """One plain sentence from the stress-test numbers."""
+    from climate import month_range
+    srt=table.sort_values(['Months with cover','bare_rain_scen'],ascending=[False,True]);t=srt.iloc[0]
+    tied=srt[(srt['Months with cover']==t['Months with cover'])&((srt.bare_rain_scen-t.bare_rain_scen).abs()<.5)]
+    if len(tied)>1:
+        extra=sorted({m for _,r in tied.iterrows() for m in r.dry_scen if m in r.added})
+        tail=f"but add water demand in {month_range(extra)}" if extra else 'with no dry months added by the new crops'
+        return f"Under {name}, {' and '.join(tied.Option)} tie for the most months covered ({t['Months with cover']} of 12), {tail}. Rain on bare soil: {t.bare_rain_scen:.0f} mm/yr."
+    extra=[m for m in t.dry_scen if m in t.added]
+    tail=f"but adds water demand in {month_range(extra)}" if extra else 'with no dry months added by the new crop'
+    low=table.sort_values('bare_rain_scen').iloc[0]
+    return f"Under {name}, {t.Option} keeps the most months covered ({t['Months with cover']} of 12), {tail}. Least rain on bare soil: {low.Option} ({low.bare_rain_scen:.0f} mm/yr)."
