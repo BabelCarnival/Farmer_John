@@ -134,3 +134,9 @@ The large 0–100 preference chart has been removed. Cards now explain how each 
 **Branding and images.** The app uses a text "TerraRoute" title in the open-licence Caveat font, bundled in assets/ with the sprout icon. No NASA logo is used. Plain-text mentions of NASA data sources remain.
 
 **Repository organisation.** Earlier research scripts and the forecasting notebook (journey.py, rotation_rules.py, state_temperature.py, year_outlook.py, Crop_Protection_Outlook.ipynb) are in legacy/ and are not imported by the app.
+
+**Offline fallback and caching (latest build).** data/power_daily_full.csv holds the full NASA POWER daily record for the Ames sample farm (42.03, -93.62; 2001-01-01 to 2024-12-31; T2M, T2M_MAX, T2M_MIN, PRECTOTCORR, ALLSKY_SFC_SW_DWN, GWETTOP, GWETROOT), saved by scripts/refresh_ames_csv.py through the same data_access.load_environment() the live app uses. It is used only if the live request fails. The older data/power_daily.csv (T2M_MAX and PRECTOTCORR only) is kept. Live results are cached with a version number so results saved by earlier app versions are ignored, and any missing optional column is added as empty rather than breaking the app.
+
+**General-option rules (update).** The general climate screen never proposes a crop whose temperature and frost fit is "poor" for its window. For the diversify option, a crop from a family already in the rotation is allowed only if it is a different crop and drought-tolerant; new families score higher. The fit label (good, fair, poor) is shown on each general card. It is a screen against indicative table values, not a yield prediction.
+
+**State follows coordinates.** When typed farm coordinates fall inside another state's outline (U.S. Census boundaries already listed above), the app switches the state selector to that state and moves the grid cell to the nearest sampled point. Coordinates outside every state keep the existing warning.
