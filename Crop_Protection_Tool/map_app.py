@@ -14,11 +14,15 @@ from crop_catalog import REFERENCES
 from exposure import compare
 from map_layers import polygon_mask
 from datetime import date
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from climate import monthly_climatology,heat_days_by_month,risk_calendar,takeaways
 from exposure import load_daily, history, load_modis
 from ollama_chat import installed_models, ask
 from report_help import answer_report_question, QUESTIONS
 
 ROOT=Path(__file__).parent
+MONTH_NAMES=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 import base64
 def _b64(name):return base64.b64encode((ROOT/'assets'/name).read_bytes()).decode()
 ICON_URI='data:image/png;base64,'+_b64('icon.png')
@@ -190,9 +194,26 @@ daily=bundle['daily'] if bundle else None
 if bundle:
     st.success(f"Loaded {len(daily):,} daily rows for {latitude:.4f}, {longitude:.4f}. Missing observations remain missing.")
     for warning in bundle['warnings']:st.warning(warning)
-    wet=[c for c in ['GWETTOP','GWETROOT'] if c in daily and daily[c].notna().any()]
-    if wet:
-        st.plotly_chart(px.line(daily,x='date',y=wet,render_mode='svg',title='NASA modelled soil-wetness indices (not field moisture measurements)'),width='stretch')
+    clim=monthly_climatology(daily);heat=heat_days_by_month(daily)
+    st.markdown('#### Your farm at a glance')
+    for t in takeaways(clim,heat,crop_history):st.markdown('- '+t)
+    fig_m=make_subplots(specs=[[{'secondary_y':True}]])
+    fig_m.add_bar(x=MONTH_NAMES,y=clim.rain_mm,name='Rain (mm)',marker_color='#4a90c2')
+    if clim.et0_mm.notna().any():fig_m.add_scatter(x=MONTH_NAMES,y=clim.et0_mm,name='Water crops need (mm)',mode='lines+markers',line=dict(color='#d9822b',width=3))
+    if clim.gwetroot.notna().any():fig_m.add_scatter(x=MONTH_NAMES,y=clim.gwetroot*100,name='Root-zone soil wetness (%)',mode='lines',line=dict(color='#2e7d4f',dash='dot'),secondary_y=True)
+    fig_m.update_yaxes(title_text='mm per month',secondary_y=False);fig_m.update_yaxes(title_text='Soil wetness (%)',range=[0,100],secondary_y=True)
+    fig_m.update_layout(title=f"Average year at your farm (NASA POWER, {daily.date.min().year}–{daily.date.max().year})",legend=dict(orientation='h',y=-.2),margin=dict(t=50))
+    st.plotly_chart(fig_m,width='stretch')
+    st.caption('When the bars sit below the line, crops rely on stored soil water or irrigation.')
+    cal_text,cal_lvl=risk_calendar(clim,heat,crop_history)
+    palette={-1:'#eeeeee',0:'#dff0d8',1:'#fff3c4',2:'#f8d0cc'}
+    st.markdown('#### Month-by-month risk calendar')
+    st.dataframe(cal_text.style.apply(lambda _:cal_lvl.map(lambda v:'background-color:'+palette[v]+';color:#222'),axis=None),width='stretch')
+    st.caption('Green = fine, yellow = watch, red = risk. Heat shows days a year at 35 °C or more. A dash means NASA data for that row was not loaded.')
+    with st.expander('Daily detail'):
+        wet=[c for c in ['GWETTOP','GWETROOT'] if c in daily and daily[c].notna().any()]
+        if wet:st.plotly_chart(px.line(daily,x='date',y=wet,render_mode='svg',title='NASA modelled soil-wetness indices (not field moisture measurements)'),width='stretch')
+        else:st.write('No daily soil-wetness data loaded.')
     with st.expander('Data provenance, units and missing values'):
         st.json(bundle['metadata']);st.write(daily.isna().sum().to_dict())
         st.download_button('Download normalised NASA point data',daily.to_csv(index=False),'NASA_point_daily.csv','text/csv')
@@ -218,7 +239,8 @@ if daily is not None:
         focus['screen_rank']=focus['Heat days ≥35°C'].rank(pct=True)+focus['Longest rainfall gap (days)'].rank(pct=True)
         top=focus.nlargest(min(3,len(focus)),'screen_rank')
         st.write('Weather periods to inspect first: '+', '.join(calendar.month_abbr[int(m)] for m in top.Month))
-        st.plotly_chart(px.bar(window_table,x='Month',y='Longest rainfall gap (days)',color='Within entered crop season',labels={'Month':'Month','Within entered crop season':'Inside your crop calendar'}),width='stretch')
+        gap_plot=window_table.assign(Season=window_table['Within entered crop season'].map({True:'Inside crop season',False:'Outside crop season'}))
+        st.plotly_chart(px.bar(gap_plot,x='Month',y='Longest rainfall gap (days)',color='Season',color_discrete_map={'Inside crop season':'#2e7d4f','Outside crop season':'#b0b0b0'}),width='stretch')
         with st.expander('See monthly heat and rainfall values'):
             st.dataframe(window_table.round(1),hide_index=True,width='stretch')
 if near_ames:
