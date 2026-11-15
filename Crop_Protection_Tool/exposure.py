@@ -13,6 +13,8 @@ def load_daily(source):
         raise ValueError('Duplicate daily dates. Resolve these before analysis.')
     if (d.precip_mm.dropna() < 0).any():
         raise ValueError('Negative rainfall found. Check missing-value codes.')
+    for c in ['tmean_c', 'tmin_c', 'solar_mj']:
+        d[c] = np.nan  # not in the Ames CSV; keeps the schema identical to live NASA data
     return d.sort_values('date').reset_index(drop=True)
 
 
