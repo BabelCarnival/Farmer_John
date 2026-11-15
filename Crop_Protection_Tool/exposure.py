@@ -5,7 +5,8 @@ import pandas as pd
 
 def load_daily(source):
     d = pd.read_csv(source)
-    d = d[['date', 'tmax_c', 'precip_mm']].copy()
+    extras = ['tmean_c', 'tmin_c', 'solar_mj', 'GWETTOP', 'GWETROOT']
+    d = d[['date', 'tmax_c', 'precip_mm'] + [c for c in extras if c in d]].copy()
     d['date'] = pd.to_datetime(d.date, errors='raise')
     for c in ['tmax_c', 'precip_mm']:
         d[c] = pd.to_numeric(d[c], errors='coerce').replace(-999, np.nan)
@@ -13,8 +14,11 @@ def load_daily(source):
         raise ValueError('Duplicate daily dates. Resolve these before analysis.')
     if (d.precip_mm.dropna() < 0).any():
         raise ValueError('Negative rainfall found. Check missing-value codes.')
-    for c in ['tmean_c', 'tmin_c', 'solar_mj']:
-        d[c] = np.nan  # not in the Ames CSV; keeps the schema identical to live NASA data
+    for c in extras:
+        if c in d:
+            d[c] = pd.to_numeric(d[c], errors='coerce').replace(-999, np.nan)
+        else:
+            d[c] = np.nan  # not in this CSV; keeps the schema identical to live NASA data
     return d.sort_values('date').reset_index(drop=True)
 
 

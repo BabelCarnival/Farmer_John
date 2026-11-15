@@ -172,13 +172,20 @@ profile=dict(crop=crop,sequence=sequence,crop_history=crop_history,region=state 
 
 st.subheader('3. Weather & Water',anchor='weather',help='Soil wetness is modelled by NASA, not measured in your field, and is not automatically equivalent to volumetric water content. Check the units in the downloaded NASA metadata.')
 @st.cache_data(ttl=86400,show_spinner=False)
-def fetch_point(lat,lon,start,end):return load_environment(lat,lon,start,end,True)
+def fetch_point(lat,lon,start,end,version=3):  # bump `version` to ignore old cache entries
+    return ensure_columns(load_environment(lat,lon,start,end,True))
+EXPECTED_COLUMNS=['tmean_c','tmin_c','solar_mj','GWETTOP','GWETROOT']
+def ensure_columns(bundle):
+    """Add any missing optional columns as NaN so later steps never break."""
+    for c in EXPECTED_COLUMNS:
+        if c not in bundle['daily']:bundle['daily'][c]=np.nan
+    return bundle
 near_ames=abs(latitude-42.03)<.001 and abs(longitude+93.62)<.001
 bundle=None
 if mode=='Sample farm (Ames, Iowa)':
     try:bundle=fetch_point(42.03,-93.62,'2001-01-01','2024-12-31')
     except Exception:
-        bundle={'daily':load_daily(ROOT/'data/power_daily.csv'),'metadata':{'source':'Supplied NASA POWER daily CSV','requested_coordinates':[42.03,-93.62],'units':{'tmax_c':'°C','precip_mm':'mm/day'},'period':'2001–2024'},'warnings':[]}
+        bundle=ensure_columns({'daily':load_daily(ROOT/'data/power_daily_full.csv'),'metadata':{'source':'Saved NASA POWER daily CSV (data/power_daily_full.csv, offline fallback)','requested_coordinates':[42.03,-93.62],'units':{'tmax_c':'°C','precip_mm':'mm/day','tmean_c':'°C','tmin_c':'°C','solar_mj':'MJ/m²/day'},'period':'2001–2024'},'warnings':['Live NASA request failed, so the saved Ames record is shown.']})
 else:
     a,b=st.columns(2)
     start=a.date_input('Weather start date',date(2001,1,1),key='weather_start')
