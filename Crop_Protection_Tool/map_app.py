@@ -94,10 +94,20 @@ def read_grid():
 try:raw,grid=read_grid()
 except Exception as e:st.error(f'Could not read the temperature workbook, so the map and later steps cannot be shown: {e}');st.stop()
 st.subheader('1. Your Farm',anchor='location',help='Map: a smooth colour surface visualises the supplied coarse temperature grid. Interpolation is for display only; calculations and selections use the original sampled values. Monthly T2M/Celsius column meanings are inferred pending original NASA export metadata.')
-states=sorted(grid.state.unique());state=st.selectbox('State',states,index=states.index('IOWA'))
+states=sorted(grid.state.unique())
+if 'pending_state' in st.session_state:st.session_state['state_select']=st.session_state.pop('pending_state')  # set before the widget is created
+if st.session_state.get('state_select') not in states:st.session_state['state_select']='IOWA'
+state=st.selectbox('State',states,key='state_select')
+if st.session_state.get('switch_note'):st.info(st.session_state.pop('switch_note'))
 g=grid[grid.state==state].copy().reset_index(drop=True)
 nearest=int(((g.lat-42.03)**2+(g.lon+93.62)**2).idxmin()) if state=='IOWA' else 0
 point_key='grid_choice_'+state
+jump=st.session_state.get('jump')
+if jump and jump['state']==state:  # arrived here because the typed coordinates lie in this state
+    st.session_state.pop('jump')
+    st.session_state[point_key]=int(((g.lat-jump['lat'])**2+(g.lon-jump['lon'])**2).idxmin())
+    st.session_state['custom_coords']=dict(state=state,pid=g.point_id[st.session_state[point_key]],lat=jump['lat'],lon=jump['lon'])
+    st.session_state['location_mode_'+state]='My coordinates'
 if point_key not in st.session_state:st.session_state[point_key]=nearest
 point=st.selectbox('Grid cell (also selectable on the map)',range(len(g)),key=point_key,format_func=lambda i:f'{g.iloc[i].lat:.3f}, {g.iloc[i].lon:.3f}')
 color=st.radio('Colour the map by',['Recent summer temperature','Change between two periods'],horizontal=True,help='Smooth shading is an inverse-distance visualisation between sampled points, not additional observations or field-scale precision. Click the map or use the grid selector for an original value. Colour is clipped to the selected Census state outline; distant unsampled areas stay transparent. Background tiles require internet.')
@@ -142,14 +152,22 @@ with st.expander('See this point’s temperature history'):
     st.plotly_chart(px.line(site,x='year',y='summer_c',markers=True,labels={'summer_c':'Jun–Aug mean T2M (°C)','year':'Year'}),width='stretch')
 
 st.subheader('2. Crop History',anchor='history',help='Enter real crop dates. The sample dates are illustrative until you replace them. Weather risk windows are calculated from these dates; actual physiological stages still require field confirmation. Results update when inputs change. Crop dates identify growing-month coverage, not confirmed crop stages or bare soil; retained residues and unrecorded cover can protect calendar gaps.')
-mode=st.radio('Detailed evidence location',['Sample farm (Ames, Iowa)','My coordinates'],index=0 if state=='IOWA' else 1,key='location_mode_'+state,horizontal=True,help='The sample farm describes 42.03, −93.62 in Ames, Iowa, not every point on the regional map.')
+mode=st.radio('Detailed evidence location',['Sample farm (Ames, Iowa)','My coordinates'],key='location_mode_'+state,horizontal=True,**({} if 'location_mode_'+state in st.session_state else {'index':0 if state=='IOWA' else 1}),help='The sample farm describes 42.03, −93.62 in Ames, Iowa, not every point on the regional map.')
 if mode=='Sample farm (Ames, Iowa)':
     latitude,longitude=42.03,-93.62
 else:
     a,b=st.columns(2)
-    latitude=a.number_input('Farm latitude',-90.,90.,float(selected.lat),format='%.4f')
-    longitude=b.number_input('Farm longitude',-180.,180.,float(selected.lon),format='%.4f')
+    cc=st.session_state.get('custom_coords')
+    keep=bool(cc) and cc['state']==state and cc['pid']==selected.point_id  # keep typed coordinates after an automatic state switch
+    latitude=a.number_input('Farm latitude',-90.,90.,float(cc['lat'] if keep else selected.lat),format='%.4f')
+    longitude=b.number_input('Farm longitude',-180.,180.,float(cc['lon'] if keep else selected.lon),format='%.4f')
 inside_state=bool(polygon_mask(np.array([longitude]),np.array([latitude]),state_geometry)[0])
+if not inside_state and mode=='My coordinates':
+    for f in boundaries['features']:  # find the state that contains the typed coordinates
+        if f['id'] in states and f['id']!=state and bool(polygon_mask(np.array([longitude]),np.array([latitude]),f['geometry'])[0]):
+            st.session_state['pending_state']=f['id'];st.session_state['jump']=dict(state=f['id'],lat=latitude,lon=longitude)
+            st.session_state['switch_note']=f"Your coordinates are in {f['id'].title()}, so the map moved there from {state.title()}."
+            st.rerun()
 if not inside_state:st.warning('These coordinates lie outside the selected state outline. Regional crop options will not be transferred to them. Daily NASA point data can still be loaded.')
 crop=st.selectbox('Main crop you intend to grow',['Corn','Soybean','Wheat','Rice','Sorghum','Other'])
 default_history=pd.DataFrame({'Crop':['Corn','Soybean'],'Planting date':[date(2023,5,1),date(2024,5,1)],'Harvest date':[date(2023,10,1),date(2024,10,1)]})
@@ -316,7 +334,8 @@ ind=indicators(options,crop_history,monthly_climatology(daily) if daily is not N
 if daily is None:st.info('Load NASA weather in Step 3 to add rain, water and climate-fit indicators. Cover and crop counts below come from your crop dates.')
 num=['Months with living cover','Rain on bare soil (mm/yr)','Crops in the cycle','Crop families in the cycle']
 long=ind.melt(id_vars='Option',value_vars=[n for n in num if ind[n].notna().any()],var_name='Indicator',value_name='Value').dropna()
-fig_i=px.bar(long,x='Option',y='Value',color='Option',facet_col='Indicator',facet_col_wrap=4,text_auto='.0f',height=330)
+neutral=dict(zip(ind.Option,['#9aa5a0','#2a9d8f','#7fb77e']))  # neutral palette: no option is coloured as 'bad'
+fig_i=px.bar(long,x='Option',y='Value',color='Option',color_discrete_map=neutral,facet_col='Indicator',facet_col_wrap=4,text_auto='.0f',height=330)
 fig_i.update_yaxes(matches=None,showticklabels=False,title=None);fig_i.update_xaxes(showticklabels=False,title=None)
 fig_i.for_each_annotation(lambda a:a.update(text=a.text.split('=')[-1]));fig_i.update_layout(legend=dict(orientation='h',y=-.1,title=None),margin=dict(t=40))
 st.plotly_chart(fig_i,width='stretch')
