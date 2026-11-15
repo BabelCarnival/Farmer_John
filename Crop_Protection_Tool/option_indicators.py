@@ -86,7 +86,7 @@ def strip_html(cal,colours):
     return ('<div style="font:700 13px sans-serif;color:#184b38;margin-top:4px">What\'s in the field each month</div>'
             f'<div style="display:flex;border-radius:6px;overflow:hidden;margin:4px 0 2px">{cells}</div>'
             f'<div style="display:flex">{names}</div>'
-            f'<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 14px">{legend}</div>')
+            f'<div class="tr-legend" style="display:flex;flex-wrap:wrap;align-content:flex-start;gap:4px 12px;margin:6px 0 14px">{legend}</div>')
 
 
 def stress_test(options,crop_history,daily,delta=0.,factor=1.):
