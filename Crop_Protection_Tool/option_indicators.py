@@ -76,12 +76,17 @@ def colour_map(options,crop_history):
 
 
 def strip_html(cal,colours):
-    cells=''.join(f'<div title="{MONTHS[m-1]}: {cal[m]}" style="flex:1;background:{colours[cal[m]]};color:#333;font:11px sans-serif;text-align:center;padding:6px 0">{MONTHS[m-1][0]}</div>' for m in range(1,13))
+    """12-month strip: coloured cells (hover for the crop), 3-letter month names underneath, nowrap legend."""
+    cells=''.join(f'<div title="{MONTHS[m-1]}: {cal[m]}" style="flex:1;min-width:0;background:{colours[cal[m]]};height:22px"></div>' for m in range(1,13))
+    names=''.join(f'<div style="flex:1;min-width:0;text-align:center;font:10px sans-serif;color:#888;overflow:hidden">{MONTHS[m-1]}</div>' for m in range(1,13))
     used=[]
     for m in range(1,13):
         if cal[m] not in used:used.append(cal[m])
-    legend=' '.join(f'<span style="font:12px sans-serif;margin-right:8px"><span style="display:inline-block;width:10px;height:10px;background:{colours[u]};margin-right:3px"></span>{u}</span>' for u in used)
-    return f'<div style="display:flex;border-radius:6px;overflow:hidden;margin:4px 0">{cells}</div><div>{legend}</div>'
+    legend=''.join(f'<span style="white-space:nowrap;font:12px sans-serif;color:#333"><span style="display:inline-block;width:10px;height:10px;background:{colours[u]};margin-right:4px"></span>{"Bare soil" if u=="bare" else u}</span>' for u in used)
+    return ('<div style="font:700 13px sans-serif;color:#184b38;margin-top:4px">What\'s in the field each month</div>'
+            f'<div style="display:flex;border-radius:6px;overflow:hidden;margin:4px 0 2px">{cells}</div>'
+            f'<div style="display:flex">{names}</div>'
+            f'<div style="display:flex;flex-wrap:wrap;gap:4px 12px;margin:6px 0 14px">{legend}</div>')
 
 
 def stress_test(options,crop_history,daily,delta=0.,factor=1.):

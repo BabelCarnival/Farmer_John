@@ -329,7 +329,7 @@ for offset in range(0,len(options),3):
     for column,c in zip(st.columns(min(3,len(options)-offset)),options[offset:offset+3]):
         with column,st.container(border=True):
             st.caption('YOUR CURRENT APPROACH' if c['id']=='current' else 'ALTERNATIVE TO EXPLORE')
-            st.caption('🌍 '+c['badge'] if c.get('general') else '✅ Locally reviewed example' if c['id']!='current' else '')
+            st.caption('🌍 '+c['badge'] if c.get('general') else '✅ Locally reviewed example' if c['id']!='current' else '📍 Your rotation today')
             st.markdown('### '+c['name'])
             st.write('**Crop sequence**')
             st.write(c['sequence'])
