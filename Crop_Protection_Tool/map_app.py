@@ -19,22 +19,26 @@ from ollama_chat import installed_models, ask
 from report_help import answer_report_question, QUESTIONS
 
 ROOT=Path(__file__).parent
-st.set_page_config(page_title='TerraRoute',page_icon='https://i.imgur.com/4NhKhEe.png',layout='wide')
+import base64
+def _b64(name):return base64.b64encode((ROOT/'assets'/name).read_bytes()).decode()
+ICON_URI='data:image/png;base64,'+_b64('icon.png')
+FONT_URI='data:font/ttf;base64,'+_b64('Caveat.ttf')
+st.set_page_config(page_title='TerraRoute',page_icon=str(ROOT/'assets/icon.png'),layout='wide')
 st.markdown('''<style>@keyframes logofade{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:none}}[data-testid="stImage"] img{animation:logofade 1.6s ease-out}@keyframes trgrad{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}.stApp{background:linear-gradient(120deg,#ffffff,#f6f3e4,#ffffff,#f1ecd6,#ffffff);background-size:300% 300%;animation:trgrad 18s ease-in-out infinite}@media(prefers-reduced-motion:reduce){.stApp{animation:none}}.block-container{max-width:1100px;padding-top:4rem}div[data-testid="stHeadingWithActionElements"]{margin-top:2.4rem}[data-testid="stCaptionContainer"]{color:#4f5f55!important;line-height:1.6}h1,h2,h3{color:#184b38}[data-testid="stMetric"]{background:white;padding:14px;border-radius:12px;border:1px solid #dce7d8}.stButton>button{min-height:45px}</style>''',unsafe_allow_html=True)
 st.components.v1.html('''<script>
 const P=window.parent,D=P.document;
 if(!P.sessionStorage.getItem("tr-intro")&&!D.getElementById("tr-intro")){
     P.sessionStorage.setItem("tr-intro","1");
     const css=D.createElement("style");
-    css.textContent="#tr-intro{position:fixed;inset:0;z-index:9999999;background:#f4f7f1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;transition:opacity .7s ease}#tr-intro img{width:min(340px,70vw);animation:trpulse 1.6s ease-in-out infinite}#tr-intro .bar{width:min(220px,50vw);height:4px;border-radius:2px;background:#dce7d8;overflow:hidden}#tr-intro .bar i{display:block;height:100%;width:40%;border-radius:2px;background:#2e9e6b;animation:trslide 1.2s ease-in-out infinite}@keyframes trpulse{0%,100%{opacity:.55;transform:scale(.97)}50%{opacity:1;transform:scale(1)}}@keyframes trslide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}";
+    css.textContent="#tr-intro{position:fixed;inset:0;z-index:9999999;background:#f4f7f1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:26px;transition:opacity .7s ease}@font-face{font-family:TRCaveat;src:url(__FONT__)}#tr-intro .trtitle{font:700 min(96px,18vw)/1 TRCaveat,cursive;color:#5fae2e;animation:trpulse 1.6s ease-in-out infinite}#tr-intro .bar{width:min(220px,50vw);height:4px;border-radius:2px;background:#dce7d8;overflow:hidden}#tr-intro .bar i{display:block;height:100%;width:40%;border-radius:2px;background:#2e9e6b;animation:trslide 1.2s ease-in-out infinite}@keyframes trpulse{0%,100%{opacity:.55;transform:scale(.97)}50%{opacity:1;transform:scale(1)}}@keyframes trslide{0%{transform:translateX(-100%)}100%{transform:translateX(350%)}}";
     D.head.appendChild(css);
     const o=D.createElement("div");o.id="tr-intro";
-    o.innerHTML='<img src="https://i.imgur.com/k28tRZs.png"><div class="bar"><i></i></div>';
+    o.innerHTML='<div class="trtitle">TerraRoute</div><div class="bar"><i></i></div>';
     D.body.appendChild(o);
     setTimeout(()=>{o.style.opacity="0";setTimeout(()=>o.remove(),800);},2200);
     setTimeout(()=>{const x=D.getElementById("tr-intro");if(x)x.remove();},6000);
 }
-</script>''',height=0)
+</script>'''.replace('__FONT__',FONT_URI),height=0)
 st.components.v1.html('''<script>
 const P=window.parent,D=P.document;
 ["tr-rail","tr-rail-style"].forEach(i=>{const o=D.getElementById(i);if(o)o.remove();});
@@ -62,7 +66,7 @@ P.__trSpy=update;
 D.addEventListener("scroll",update,true);
 setTimeout(update,300);
 </script>''',height=0)
-st.image('https://i.imgur.com/k28tRZs.png', width=400)
+st.markdown('<style>@font-face{font-family:TRCaveat;src:url('+FONT_URI+')}.tr-title{font:700 76px/1.1 TRCaveat,cursive;color:#5fae2e;margin:0}</style><div class="tr-title">TerraRoute</div>',unsafe_allow_html=True)
 st.write('Explore rotation choices for your crops, soil and priorities')
 
 @st.cache_data
@@ -371,7 +375,7 @@ const old=D.getElementById("chat-style");if(old)old.remove();
 const css=D.createElement("style");css.id="chat-style";
 css.textContent=`.st-key-chatbubble{position:fixed!important;left:14px;bottom:28px;width:54px;height:54px;z-index:999998}
 .st-key-chatbubble [data-testid="stPopover"]{width:54px}
-.st-key-chatbubble [data-testid="stPopover"]>button,.st-key-chatbubble [data-testid="stPopoverButton"]{width:54px;height:54px;min-height:54px;padding:0;border-radius:50%;background:#fff url(https://i.imgur.com/4NhKhEe.png) center/68% no-repeat!important;border:2px solid #2e9e6b!important;font-size:0!important;box-shadow:0 6px 20px rgba(24,75,56,.3);transition:transform .15s ease}
+.st-key-chatbubble [data-testid="stPopover"]>button,.st-key-chatbubble [data-testid="stPopoverButton"]{width:54px;height:54px;min-height:54px;padding:0;border-radius:50%;background:#fff url(__ICON__) center/68% no-repeat!important;border:2px solid #2e9e6b!important;font-size:0!important;box-shadow:0 6px 20px rgba(24,75,56,.3);transition:transform .15s ease}
 .st-key-chatbubble [data-testid="stPopover"]>button *{font-size:0!important;color:transparent!important}
 .st-key-chatbubble [data-testid="stPopover"]>button:hover,.st-key-chatbubble [data-testid="stPopoverButton"]:hover{transform:scale(1.12)}
 .st-key-chatbubble [data-testid="stPopover"]>button svg,.st-key-chatbubble [data-testid="stPopoverButton"] svg,.st-key-chatbubble [data-testid="stIconMaterial"]{display:none}
@@ -389,6 +393,6 @@ P.__chatTimer=setInterval(()=>{
     });
   }
 },300);
-</script>''',height=0)
+</script>'''.replace('__ICON__',ICON_URI),height=0)
 with st.expander('Full sources and methods'):st.markdown((ROOT/'SOURCES.md').read_text())
 st.markdown('<p style="text-align:center;color:#4f5f55;font-size:14px;margin-top:1.5rem">TerraRoute prototype. NASA environmental observations support local decisions; local crop/soil validation remains necessary. AI assistance disclosed in SOURCES.md.</p>',unsafe_allow_html=True)
