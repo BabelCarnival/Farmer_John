@@ -55,6 +55,15 @@ def _fit(c,months,key):
     return score,detail
 
 
+def fit_label(c,months,key):
+    """Temperature/frost fit of crop `key` over `months`: 'good', 'fair' or 'poor' (c = clim indexed by month)."""
+    name,family,typ,need,(lo,hi),frost,drought=CROPS[key]
+    t=[c.tmean_c[m] for m in months];fr=max(c.frost_year_share[m] for m in months)
+    if (frost=='no' and fr>=.25) or (frost=='partly' and fr>=.75):return 'poor'
+    pen=float(np.mean([max(0,lo-x,x-hi) for x in t]))
+    return 'good' if pen<=1 else 'fair' if pen<=3 else 'poor'
+
+
 def general_options(profile,clim):
     """Return (alternatives, notes). `clim` is monthly_climatology() output. Never raises on missing data."""
     c=clim.set_index('month')
@@ -81,7 +90,7 @@ def general_options(profile,clim):
             sequence=f'{seq}; {nm.lower()} in {month_range(w)}',cover_opportunity=2,diversity_opportunity=2 if legume else 1,
             implementation_ease=1,source=[],risk='Cover establishment and termination add work and use water while growing.',
             reason=f'Your field is bare in {month_range(runs[0])}. NASA POWER climate for {d}.',
-            fit={'crop':k,'months':w,'detail':d},risks=LOCAL,
+            fit={'crop':k,'months':w,'detail':d,'label':fit_label(c,w,k)},risks=LOCAL,
             ui=dict(what=f'Plant {nm.lower()} in {month_range(w)}; confirm establishment and termination locally.',
                 before='Check seed, sowing access, soil moisture and termination timing.',
                 cover='Cover in the bare months',div='Adds a legume' if legume else 'Adds a cover grass',work='Sow and terminate the cover',
@@ -111,7 +120,7 @@ def general_options(profile,clim):
             sequence=f'{seq} → {nm} → {seq}',cover_opportunity=1,diversity_opportunity=2,implementation_ease=0,source=[],
             risk='Needs a local market or use, suitable calendar and possibly new equipment.',
             reason=f'A different crop family ({fam}) that suits your growing season. NASA POWER climate for {d}.',
-            fit={'crop':k,'months':w,'detail':d},risks=LOCAL,
+            fit={'crop':k,'months':w,'detail':d,'label':fit_label(c,w,k)},risks=LOCAL,
             ui=dict(what=f'Add {nm.lower()} for one season; confirm a local crop calendar and outlet.',
                 before='Confirm machinery, crop timing and a market or forage use.',
                 cover='Another crop in the cycle',div=f'{nm} ({fam}) added',work='More crop operations; check machinery',

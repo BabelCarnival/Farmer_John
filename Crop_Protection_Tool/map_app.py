@@ -16,6 +16,7 @@ from map_layers import polygon_mask
 from datetime import date
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
+from option_indicators import indicators,colour_map,strip_html,option_calendar
 from climate import monthly_climatology,heat_days_by_month,risk_calendar,takeaways
 from exposure import load_daily, history, load_modis
 from ollama_chat import installed_models, ask
@@ -275,6 +276,7 @@ def priority_explanation(candidate):
         notes.append('Water savings have not been established.' if current else 'Living cover uses water; review moisture and termination timing.')
     return notes or ['Select a priority in Step 1 to see the relevant trade-offs.']
 
+strip_colours=colour_map(options,crop_history)
 shared_notes=[]
 for c in options:
     for text in [c['priority_note'],c['soil_note']]:
@@ -287,6 +289,7 @@ for offset in range(0,len(options),3):
             st.markdown('### '+c['name'])
             st.write('**Crop sequence**')
             st.write(c['sequence'])
+            st.markdown(strip_html(option_calendar(c,crop_history)[0],strip_colours),unsafe_allow_html=True)
             st.write('**What changes**')
             st.write('Keep your current crop system as the comparison point.' if c['id']=='current' else c['ui']['what'] if c.get('general') else 'Plant cereal rye after corn, before soybean; confirm establishment and termination locally.' if c['id']=='cover' else 'Extend the cycle with a small grain and red clover; confirm a local crop calendar and outlet.')
             st.write('**For your priorities**')
@@ -299,16 +302,35 @@ for offset in range(0,len(options),3):
                     st.write('**Why this option:** '+c['reason']);st.write('**Risks:** '+' '.join(c['risks']));st.caption('General screening values, verify locally with FAO ECOCROP / extension advice.')
                 elif not c['source']:st.write('Your entered crop history; no change assumed.')
 
-st.markdown('#### The practical differences',help='These describe the proposed management changes. They are not measured benefits or a percentage chance of success. NASA weather exposure is checked separately in Step 5.')
-comparison=[]
-for c in options:
-    kind=c['id']
-    comparison.append({'Option':c['name'],
-        'Soil cover': 'Existing practices' if kind=='current' else c['ui']['cover'] if c.get('general') else 'Cover between cash crops' if kind=='cover' else 'Longer cycle with additional cover',
-        'Crop diversity': 'Your current mix' if kind=='current' else c['ui']['div'] if c.get('general') else 'Rye added between crops' if kind=='cover' else 'Small grain and clover added',
-        'Extra work': 'No system change proposed' if kind=='current' else c['ui']['work'] if c.get('general') else 'Sow and terminate rye' if kind=='cover' else 'More crop operations; check machinery',
-        'Water': 'Not calculated' if kind=='current' else 'Living cover uses water; timing matters'})
-st.table(pd.DataFrame(comparison).set_index('Option'))
+st.markdown('#### How the options compare',help='Each indicator is calculated from your crop dates, the option calendar and NASA POWER monthly rain, evaporative demand and temperature. Iowa reviewed options assume cover in Mar, Apr, Oct and Nov unless a bare month is already covered.')
+ind=indicators(options,crop_history,monthly_climatology(daily) if daily is not None else None)
+if daily is None:st.info('Load NASA weather in Step 3 to add rain, water and climate-fit indicators. Cover and crop counts below come from your crop dates.')
+num=['Months with living cover','Rain on bare soil (mm/yr)','Crops in the cycle','Crop families in the cycle']
+long=ind.melt(id_vars='Option',value_vars=[n for n in num if ind[n].notna().any()],var_name='Indicator',value_name='Value').dropna()
+fig_i=px.bar(long,x='Option',y='Value',color='Option',facet_col='Indicator',facet_col_wrap=4,text_auto='.0f',height=330)
+fig_i.update_yaxes(matches=None,showticklabels=False,title=None);fig_i.update_xaxes(showticklabels=False,title=None)
+fig_i.for_each_annotation(lambda a:a.update(text=a.text.split('=')[-1]));fig_i.update_layout(legend=dict(orientation='h',y=-.1,title=None),margin=dict(t=40))
+st.plotly_chart(fig_i,width='stretch')
+better={'Months with living cover':1,'Rain on bare soil (mm/yr)':-1,'Crops in the cycle':1,'Crop families in the cycle':1}
+def cell(row,col):
+    v=row[col]
+    if isinstance(v,str):return v
+    if pd.isna(v):return '–'
+    d=v-ind.loc[0,col]
+    return f'{v:.0f}'+('' if d==0 else f' ▲ +{d:.0f}' if d>0 else f' ▼ {d:.0f}')
+shown=pd.DataFrame({col:[cell(r,col) for _,r in ind.iterrows()] for col in ind.columns[1:]},index=ind.Option).T
+def colour_cells(frame):
+    out=pd.DataFrame('',index=frame.index,columns=frame.columns)
+    for col_i,(_,r) in enumerate(ind.iterrows()):
+        for row in frame.index:
+            v=r[row];base=ind.loc[0,row];good=bad=False
+            if row in better and not pd.isna(v) and v!=base:good=(v-base)*better[row]>0;bad=not good
+            if row=='Extra water demand':good=v=='none' and r['Option']!=ind.Option[0];bad=v=='high'
+            if row=='Climate fit of the new crop':good=v=='good';bad=v=='poor'
+            out.loc[row,frame.columns[col_i]]='background-color:'+('#dff0d8' if good else '#f8d0cc' if bad else '')+';color:#222'
+    return out
+st.dataframe(shown.style.apply(colour_cells,axis=None),width='stretch')
+st.caption('Indicators are calculated from your crop dates and NASA POWER climate, not opinions. ▲▼ show change against your current rotation; green is more favourable, red less. Indicators describe the plan, not guaranteed outcomes. Extra water demand counts months where a new living crop grows while rain is under half of evaporative demand (none = 0, some = 1–2, high = 3+).')
 with st.expander('Local checks and comparison method'):
     for note in shared_notes:st.write(note)
     st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue covers Iowa corn/soybean systems only; elsewhere a general climate screen (indicative values, verify locally with FAO ECOCROP or extension advice) is used.')
