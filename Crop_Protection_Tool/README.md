@@ -12,7 +12,6 @@ Farmers deciding whether to change their crop rotation face rising heat, uneven 
 
 TerraRoute takes your location and crop history, pulls NASA weather and soil-wetness data for that spot, and shows when your field is dry, frosty, hot or bare. It then compares your current rotation with two alternatives and stress-tests all three under hotter, drier or wetter weather. Everything is calculated from data and your inputs. It does not guess.
 
-<!-- Add a screenshot here: ![TerraRoute screenshot](assets/screenshot.png) -->
 
 ## The six steps
 
