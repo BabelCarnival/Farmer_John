@@ -303,6 +303,7 @@ for offset in range(0,len(options),3):
             st.write('**For your priorities**')
             for note in priority_explanation(c):st.write('• '+note)
             st.write('**Main trade-off:** '+c['risk'])
+            if c.get('general'):st.write('**Climate fit:** '+c['fit']['label'])
             st.write('**Before trying it:** '+('Confirm current residue cover and uncovered months.' if c['id']=='current' else c['ui']['before'] if c.get('general') else 'Check seed, sowing access, soil moisture and termination timing.' if c['id']=='cover' else 'Confirm machinery, crop timing and a market or forage use.'))
             with st.expander('Supporting evidence'):
                 for key in c['source']:st.markdown('['+REFERENCES[key]['note']+']('+REFERENCES[key]['url']+')')

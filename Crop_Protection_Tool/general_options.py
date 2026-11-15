@@ -83,7 +83,7 @@ def general_options(profile,clim):
         for k,v in CROPS.items():
             if v[2]!='cover' or len(window)<v[3] or k in names:continue
             s,d=_fit(c,window,k)
-            if s is not None and (best is None or s>best[0]):best=(s,k,d,window)
+            if s is not None and fit_label(c,window,k)!='poor' and (best is None or s>best[0]):best=(s,k,d,window)
     if best:
         _,k,d,w=best;nm=CROPS[k][0];legume=CROPS[k][1]=='legume'
         out.append(dict(id='general_cover',general=True,badge=BADGE,name=f'Add {nm.lower()} in the bare months',
@@ -103,14 +103,18 @@ def general_options(profile,clim):
     cands=[]
     gw=_runs(grow)
     for k,v in CROPS.items():
-        if v[2]!='cash' or k in names or v[1] in fams:continue
-        if not (v[1]=='legume' or v[6]!='no'):continue
+        if v[2]!='cash' or k in names:continue
+        new_family=v[1] not in fams
+        # a family already in the rotation is allowed only for a drought-tolerant crop (e.g. sorghum after corn)
+        if not new_family and v[6]!='yes':continue
+        if new_family and not (v[1]=='legume' or v[6]!='no'):continue
         if not gw:continue
         L=gw[0];best_w=None
         for i in range(len(L)-v[3]+1) if len(L)>=v[3] else []:
             w=L[i:i+v[3]];s,d=_fit(c,w,k)
-            if s is not None and (best_w is None or s>best_w[0]):best_w=(s,d,w)
-        if best_w:cands.append((best_w[0]+(.5 if v[1]=='legume' else 0),k,best_w[1],best_w[2]))
+            if s is None or fit_label(c,w,k)=='poor':continue  # never propose a poor climate fit
+            if best_w is None or s>best_w[0]:best_w=(s,d,w)
+        if best_w:cands.append((best_w[0]+(1. if new_family else 0)+(.5 if v[1]=='legume' else 0),k,best_w[1],best_w[2]))
     cands.sort(reverse=True)
     need=2-len(out)
     for s,k,d,w in cands[:need]:
@@ -119,7 +123,7 @@ def general_options(profile,clim):
             general=True,badge=BADGE,name=f'Add {nm.lower()} to the rotation',
             sequence=f'{seq} → {nm} → {seq}',cover_opportunity=1,diversity_opportunity=2,implementation_ease=0,source=[],
             risk='Needs a local market or use, suitable calendar and possibly new equipment.',
-            reason=f'A different crop family ({fam}) that suits your growing season. NASA POWER climate for {d}.',
+            reason=(f'A different crop family ({fam}) that suits your growing season. ' if fam not in fams else f'A different crop from a family already in your rotation ({fam}), chosen because it tolerates dry conditions. ')+f'NASA POWER climate for {d}.',
             fit={'crop':k,'months':w,'detail':d,'label':fit_label(c,w,k)},risks=LOCAL,
             ui=dict(what=f'Add {nm.lower()} for one season; confirm a local crop calendar and outlet.',
                 before='Confirm machinery, crop timing and a market or forage use.',
