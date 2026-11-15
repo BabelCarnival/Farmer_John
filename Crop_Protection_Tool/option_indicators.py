@@ -26,6 +26,16 @@ def option_calendar(c,crop_history):
     return cal,added
 
 
+def dormant_months(o,added,c):
+    """Added cover months in which a frost-tolerant cover crop is dormant (mean temperature below 0 °C).
+    `c` is the climatology indexed by month. Dormant months still count as covered."""
+    if o.get('general'):key=o['fit']['crop']
+    elif o['id']=='cover':key='rye'
+    else:return []
+    if CROPS[key][2]!='cover' or CROPS[key][5]!='yes' or c is None or c.tmean_c.isna().any():return []
+    return [m for m in added if c.tmean_c[m]<0]
+
+
 def _crop_names(crop_history,c):
     names={r['Crop'].lower() for r in crop_history}
     fams={FAMILY.get(n,n) for n in names}
@@ -43,7 +53,7 @@ def indicators(options,crop_history,clim):
     for o in options:
         cal,added=option_calendar(o,crop_history);bare=[m for m in range(1,13) if cal[m]=='bare']
         names,fams=_crop_names(crop_history,o)
-        r={'Option':o['name'],'Months with living cover':12-len(bare),'Crops in the cycle':len(names),'Crop families in the cycle':len(fams),
+        r={'Option':o['name'],'Months with living cover':12-len(bare),'Dormant months':len(dormant_months(o,added,c)),'Crops in the cycle':len(names),'Crop families in the cycle':len(fams),
            'Rain on bare soil (mm/yr)':np.nan,'Extra water demand':'unknown','Climate fit of the new crop':'–' if o['id']=='current' else 'not screened'}
         if c is not None:
             r['Rain on bare soil (mm/yr)']=float(c.rain_mm[bare].sum()) if bare else 0.
@@ -94,8 +104,12 @@ def stress_test(options,crop_history,daily,delta=0.,factor=1.):
             r[f'bare_rain_{tag}']=float(c.rain_mm[bare].sum()) if bare else 0.
             r[f'dry_{tag}']=[m for m in living if c.deficit[m]]
             r[f'frost_{tag}']=[m for m in added if c.frost_year_share[m]>=.5]
+            r[f'dormant_{tag}']=len(dormant_months(o,added,c))
         r['added']=added;rows.append(r)
     return pd.DataFrame(rows),None
+
+
+def _covered(n,dormant):return f"{n} of 12" + (f", {dormant} dormant" if dormant else "")
 
 
 def stress_verdict(table,name):
@@ -106,8 +120,8 @@ def stress_verdict(table,name):
     if len(tied)>1:
         extra=sorted({m for _,r in tied.iterrows() for m in r.dry_scen if m in r.added})
         tail=f"but add water demand in {month_range(extra)}" if extra else 'with no dry months added by the new crops'
-        return f"Under {name}, {' and '.join(tied.Option)} tie for the most months covered ({t['Months with cover']} of 12), {tail}. Rain on bare soil: {t.bare_rain_scen:.0f} mm/yr."
+        return f"Under {name}, {' and '.join(tied.Option)} tie for the most months covered ({_covered(t['Months with cover'],t.dormant_scen)}), {tail}. Rain on bare soil: {t.bare_rain_scen:.0f} mm/yr."
     extra=[m for m in t.dry_scen if m in t.added]
     tail=f"but adds water demand in {month_range(extra)}" if extra else 'with no dry months added by the new crop'
     low=table.sort_values('bare_rain_scen').iloc[0]
-    return f"Under {name}, {t.Option} keeps the most months covered ({t['Months with cover']} of 12), {tail}. Least rain on bare soil: {low.Option} ({low.bare_rain_scen:.0f} mm/yr)."
+    return f"Under {name}, {t.Option} keeps the most months covered ({_covered(t['Months with cover'],t.dormant_scen)}), {tail}. Least rain on bare soil: {low.Option} ({low.bare_rain_scen:.0f} mm/yr)."

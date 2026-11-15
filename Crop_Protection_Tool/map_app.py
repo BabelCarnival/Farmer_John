@@ -16,7 +16,7 @@ from map_layers import polygon_mask
 from datetime import date
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
-from option_indicators import stress_test,stress_verdict,indicators,colour_map,strip_html,option_calendar
+from option_indicators import IOWA_COVER_MONTHS,stress_test,stress_verdict,indicators,colour_map,strip_html,option_calendar
 from climate import monthly_climatology,heat_days_by_month,risk_calendar,takeaways
 from exposure import load_daily, history, load_modis
 from ollama_chat import installed_models, ask
@@ -242,8 +242,26 @@ if bundle:
         if wet:st.plotly_chart(px.line(daily,x='date',y=wet,render_mode='svg',title='NASA modelled soil-wetness indices (not field moisture measurements)'),width='stretch')
         else:st.write('No daily soil-wetness data loaded.')
     with st.expander('Data provenance, units and missing values'):
-        st.json(bundle['metadata']);st.write(daily.isna().sum().to_dict())
+        md=bundle.get('metadata') or {}
+        rc=md.get('requested_coordinates') or [latitude,longitude]
+        d0,d1=daily.date.min().date(),daily.date.max().date()
+        if md.get('request_url'):
+            st.write(f"Source: NASA POWER daily point data (Agroclimatology community), requested {str(md.get('accessed_utc','date not recorded'))[:10]} for {rc[0]:.4f}, {rc[1]:.4f}, {d0}–{d1}.")
+        else:
+            st.write(f"Saved NASA POWER record for Ames, Iowa ({d0.year}–{d1.year}).")
+        pm={**(md.get('parameter_metadata') or {}),**((md.get('soil_wetness') or {}).get('parameter_metadata') or {}),**((md.get('extra_weather') or {}).get('parameter_metadata') or {})}
+        VARS=[('tmax_c','Daily maximum temperature','T2M_MAX','°C'),('tmean_c','Daily mean temperature','T2M','°C'),('tmin_c','Daily minimum temperature','T2M_MIN','°C'),
+              ('precip_mm','Daily rainfall (corrected)','PRECTOTCORR','mm/day'),('solar_mj','Sunlight at the surface (all-sky)','ALLSKY_SFC_SW_DWN','MJ/m²/day'),
+              ('GWETTOP','Surface soil wetness (0–1)','GWETTOP','fraction'),('GWETROOT','Root-zone soil wetness (0–1)','GWETROOT','fraction')]
+        rows=[]
+        for col,name,code,unit in VARS:
+            if col in daily and daily[col].notna().any():
+                have=int(daily[col].notna().sum());rows.append({'Variable':name,'NASA code':code,'Units':{'C':'°C','1':'fraction (0–1)','MJ/m^2/day':'MJ/m²/day'}.get(str((pm.get(code) or {}).get('units') or unit),(pm.get(code) or {}).get('units') or unit),'Days available':have,'Days missing':len(daily)-have})
+        st.dataframe(pd.DataFrame(rows),hide_index=True,width='stretch')
+        if md.get('request_url'):st.markdown(f"[View the exact NASA request]({md['request_url']})")
         st.download_button('Download normalised NASA point data',daily.to_csv(index=False),'NASA_point_daily.csv','text/csv')
+        with st.popover('Technical details (raw NASA response)'):
+            st.json(md);st.write(daily.isna().sum().to_dict())
     with st.expander('Explore the weather history'):
         monthly=daily.set_index('date').resample('MS').agg(tmax_c=('tmax_c','mean'),precip_mm=('precip_mm',lambda x:x.sum(min_count=1))).reset_index()
         st.plotly_chart(px.line(monthly,x='date',y='tmax_c',render_mode='svg',labels={'tmax_c':'Monthly mean of daily maximum temperature (°C)','date':'Date'}),width='stretch')
@@ -291,7 +309,7 @@ def priority_explanation(candidate):
     current=candidate['id']=='current'
     ui=candidate.get('ui')
     if ui and not current:
-        return [x for x,on in [('Adds an opportunity for living cover; establishment must be confirmed.' if candidate['cover_opportunity']==2 else 'Adds some variety; no extra ground cover assumed.','Improve soil cover' in priorities),(ui['note_div'],'Diversify the sequence' in priorities),(ui['note_work'],'Limit added work/equipment' in priorities),('Water use depends on rain and timing; review moisture before assuming a saving.','Conserve water' in priorities)] if on] or ['Select a priority in Step 1 to see the relevant trade-offs.']
+        return [x for x,on in [('Adds an opportunity for living cover; establishment must be confirmed.' if candidate['cover_opportunity']==2 else 'Adds some variety; no extra ground cover assumed.','Improve soil cover' in priorities),(ui['note_div'],'Diversify the sequence' in priorities),(ui['note_work'],'Limit added work/equipment' in priorities),('Water use depends on rain and timing; review moisture before assuming a saving.','Conserve water' in priorities)] if on] or ['Select a priority in Step 2 to see the relevant trade-offs.']
     if 'Improve soil cover' in priorities:
         notes.append('Keeps existing cover practices; check gaps and residues.' if current else 'Adds an opportunity for living cover; establishment must be confirmed.')
     if 'Diversify the sequence' in priorities:
@@ -300,7 +318,7 @@ def priority_explanation(candidate):
         notes.append('No crop-system change proposed.' if current else 'Adds sowing and termination tasks.' if candidate['id']=='cover' else 'Needs more crop operations and equipment or a contractor.')
     if 'Conserve water' in priorities:
         notes.append('Water savings have not been established.' if current else 'Living cover uses water; review moisture and termination timing.')
-    return notes or ['Select a priority in Step 1 to see the relevant trade-offs.']
+    return notes or ['Select a priority in Step 2 to see the relevant trade-offs.']
 
 strip_colours=colour_map(options,crop_history)
 shared_notes=[]
@@ -333,9 +351,10 @@ st.markdown('#### How the options compare',help='Each indicator is calculated fr
 ind=indicators(options,crop_history,monthly_climatology(daily) if daily is not None else None)
 if daily is None:st.info('Load NASA weather in Step 3 to add rain, water and climate-fit indicators. Cover and crop counts below come from your crop dates.')
 num=['Months with living cover','Rain on bare soil (mm/yr)','Crops in the cycle','Crop families in the cycle']
-long=ind.melt(id_vars='Option',value_vars=[n for n in num if ind[n].notna().any()],var_name='Indicator',value_name='Value').dropna()
+long=ind.melt(id_vars=['Option','Dormant months'],value_vars=[n for n in num if ind[n].notna().any()],var_name='Indicator',value_name='Value').dropna()
+long['Label']=[f'{v:.0f} of 12'+(f' ({d} dormant)' if d else '') if i=='Months with living cover' else f'{v:.0f}' for v,d,i in zip(long.Value,long['Dormant months'],long.Indicator)]
 neutral=dict(zip(ind.Option,['#9aa5a0','#2a9d8f','#7fb77e']))  # neutral palette: no option is coloured as 'bad'
-fig_i=px.bar(long,x='Option',y='Value',color='Option',color_discrete_map=neutral,facet_col='Indicator',facet_col_wrap=4,text_auto='.0f',height=330)
+fig_i=px.bar(long,x='Option',y='Value',color='Option',color_discrete_map=neutral,facet_col='Indicator',facet_col_wrap=4,text='Label',height=330)
 fig_i.update_yaxes(matches=None,showticklabels=False,title=None);fig_i.update_xaxes(showticklabels=False,title=None)
 fig_i.for_each_annotation(lambda a:a.update(text=a.text.split('=')[-1]));fig_i.update_layout(legend=dict(orientation='h',y=-.1,title=None),margin=dict(t=40))
 st.plotly_chart(fig_i,width='stretch')
@@ -345,8 +364,10 @@ def cell(row,col):
     if isinstance(v,str):return v
     if pd.isna(v):return '–'
     d=v-ind.loc[0,col]
+    if col=='Months with living cover':
+        dm=int(row['Dormant months']);return f'{v:.0f} of 12'+(f' ({dm} dormant)' if dm else '')+('' if d==0 else f' ▲ +{d:.0f}' if d>0 else f' ▼ {d:.0f}')
     return f'{v:.0f}'+('' if d==0 else f' ▲ +{d:.0f}' if d>0 else f' ▼ {d:.0f}')
-shown=pd.DataFrame({col:[cell(r,col) for _,r in ind.iterrows()] for col in ind.columns[1:]},index=ind.Option).T
+shown=pd.DataFrame({col:[cell(r,col) for _,r in ind.iterrows()] for col in ind.columns[1:] if col!='Dormant months'},index=ind.Option).T
 def colour_cells(frame):
     out=pd.DataFrame('',index=frame.index,columns=frame.columns)
     for col_i,(_,r) in enumerate(ind.iterrows()):
@@ -359,6 +380,7 @@ def colour_cells(frame):
     return out
 st.dataframe(shown.style.apply(colour_cells,axis=None),width='stretch')
 st.caption('Indicators are calculated from your crop dates and NASA POWER climate, not opinions. ▲▼ show change against your current rotation; green is more favourable, red less. Indicators describe the plan, not guaranteed outcomes. Extra water demand counts months where a new living crop grows while rain is under half of evaporative demand (none = 0, some = 1–2, high = 3+).')
+st.caption("Dormant months count as covered: a frost-tolerant cover crop is alive under snow and still protects the soil, but it isn't actively growing.")
 with st.expander('Local checks and comparison method'):
     for note in shared_notes:st.write(note)
     st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue covers Iowa corn/soybean systems only; elsewhere a general climate screen (indicative values, verify locally with FAO ECOCROP or extension advice) is used.')
@@ -371,8 +393,14 @@ if daily is not None and year is not None:
     delta=2. if scenario=='Hotter +2°C' else 0.;factor=.8 if scenario=='Drier −20%' else 1.2 if scenario=='Wetter +20%' else 1.
     if scenario=='Custom':
         delta=st.slider('Temperature offset (°C)',-2.,5.,2.,.5);factor=st.slider('Rainfall percentage',50,150,80,5)/100
-    cover_months=st.multiselect('Assumed cover months for alternative options (confirm locally)',range(1,13),[3,4,10,11],format_func=lambda m:calendar.month_abbr[m],help='The chart below shows rainfall that falls in months you assume are uncovered. Lower values reflect this calendar assumption only; they do not measure reduced erosion, water savings or cover-crop success. Cover months have not been inferred from NASA data.')
-    plans=[{'name':c['name'],'sensitive':growing_months,'bare':gap_months if c['id']=='current' else [m for m in gap_months if m not in cover_months]} for c in options]
+    cover_months=list(IOWA_COVER_MONTHS)
+    if any(c['id'] in ('cover','diversified') for c in options):
+        with st.expander('Optional: change the assumed cover months for the locally reviewed Iowa options'):
+            cover_months=st.multiselect('Assumed cover months (confirm locally)',range(1,13),IOWA_COVER_MONTHS,format_func=lambda m:calendar.month_abbr[m],help='By default each option uses its own cover months, as shown on its crop strip. This only changes the two locally reviewed Iowa options. Cover months have not been inferred from NASA data.')
+    def bare_months(c):
+        if c['id'] in ('cover','diversified'):return [m for m in gap_months if m not in cover_months]
+        cal=option_calendar(c,crop_history)[0];return [m for m in range(1,13) if cal[m]=='bare']
+    plans=[{'name':c['name'],'sensitive':growing_months,'bare':bare_months(c)} for c in options]
     scenario_settings={'historical_year':int(year),'temperature_offset_c':delta,'rainfall_multiplier':factor,'assumed_cover_months':cover_months,'calendar_plans':plans}
     base=compare(daily,plans,year,35,1);altered=daily.copy();altered['tmax_c']+=delta;altered['precip_mm']*=factor
     result=compare(altered,plans,year,35,1)
@@ -472,7 +500,8 @@ css.textContent=`.st-key-chatbubble{position:fixed!important;left:14px;bottom:28
 .st-key-chatbubble [data-testid="stPopover"]>button:hover,.st-key-chatbubble [data-testid="stPopoverButton"]:hover{transform:scale(1.12)}
 .st-key-chatbubble [data-testid="stPopover"]>button svg,.st-key-chatbubble [data-testid="stPopoverButton"] svg,.st-key-chatbubble [data-testid="stIconMaterial"]{display:none}
 .chatbadge{position:fixed;left:52px;bottom:66px;min-width:20px;height:20px;padding:0 5px;box-sizing:border-box;border-radius:10px;background:#e53935;color:#fff;font:700 12px/20px sans-serif;text-align:center;z-index:999999;pointer-events:none}
-[data-testid="stPopoverBody"]{width:360px;max-width:92vw;max-height:80vh;border-radius:18px}`;
+[data-testid="stPopoverBody"]{width:360px;max-width:92vw;max-height:80vh;border-radius:18px}
+@media(max-width:700px){.st-key-chatbubble{left:auto!important;right:14px}.chatbadge{left:auto!important;right:8px}}`;
 D.head.appendChild(css);
 if(P.__chatTimer)clearInterval(P.__chatTimer);
 P.__chatTimer=setInterval(()=>{

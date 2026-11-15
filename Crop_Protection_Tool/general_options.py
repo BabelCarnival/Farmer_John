@@ -37,9 +37,19 @@ def _runs(months):
     return sorted(runs,key=len,reverse=True)
 
 
+def _active(c,months,key):
+    """Months the crop is actually growing. Frost-tolerant cover crops (rye, vetch) are dormant,
+    not killed, in months with a mean temperature below 0 °C, so those months are skipped."""
+    v=CROPS[key]
+    if v[2]=='cover' and v[5]=='yes':return [m for m in months if c.tmean_c[m]>=0]
+    return list(months)
+
+
 def _fit(c,months,key):
     """Return (score, detail) for crop `key` over `months`, or (None, reason) if it fails."""
     name,family,typ,need,(lo,hi),frost,drought=CROPS[key]
+    dormant=[m for m in months if m not in _active(c,months,key)];months=_active(c,months,key)
+    if CROPS[key][2]=='cover' and CROPS[key][5]=='yes' and len(months)<2:return None,'fewer than 2 months above 0 °C to grow in'
     t=[c.tmean_c[m] for m in months];fr=[c.frost_year_share[m] for m in months]
     pen=float(np.mean([max(0,lo-x,x-hi) for x in t]))
     worst=max(fr);dry=[m for m in months if c.deficit[m]]
@@ -49,7 +59,7 @@ def _fit(c,months,key):
     bonus=0.
     if dry:bonus={'yes':1.5,'partly':.5,'no':-1.}[drought]
     score=-pen+bonus
-    detail=(f"{month_range(months)}: monthly mean {min(t):.0f} to {max(t):.0f} °C (it prefers {lo}–{hi} °C), "
+    detail=(f"{month_range(months)}"+(f" (dormant in {month_range(dormant)}, below 0 °C)" if dormant else "")+f": monthly mean {min(t):.0f} to {max(t):.0f} °C (it prefers {lo}–{hi} °C), "
             f"frost in up to {worst*100:.0f}% of years"+(f", dry in {month_range(dry)}" if dry else ", no dry months")+
             f"; rain {sum(c.rain_mm[m] for m in months):.0f} mm vs {sum(c.et0_mm[m] for m in months):.0f} mm crop water need")
     return score,detail
@@ -58,6 +68,8 @@ def _fit(c,months,key):
 def fit_label(c,months,key):
     """Temperature/frost fit of crop `key` over `months`: 'good', 'fair' or 'poor' (c = clim indexed by month)."""
     name,family,typ,need,(lo,hi),frost,drought=CROPS[key]
+    months=_active(c,months,key)
+    if typ=='cover' and frost=='yes' and len(months)<2:return 'poor'
     t=[c.tmean_c[m] for m in months];fr=max(c.frost_year_share[m] for m in months)
     if (frost=='no' and fr>=.25) or (frost=='partly' and fr>=.75):return 'poor'
     pen=float(np.mean([max(0,lo-x,x-hi) for x in t]))
