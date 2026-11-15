@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from year_outlook import forecast
 
-HERE=Path(__file__).parent
+HERE=Path(__file__).parent.parent
 
 def load_workbook(state='IOWA',latitude=42.03,longitude=-93.62):
     # header=None matters: the first row contains a valid data record.

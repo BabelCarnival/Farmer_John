@@ -5,8 +5,9 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import streamlit as st
+import sys;sys.path.insert(0,str(Path(__file__).parent.parent))
 from exposure import load_daily,history,load_modis,dry_run,compare
-ROOT=Path(__file__).parent
+ROOT=Path(__file__).parent.parent
 
 def environment(selected,state,near):
     st.subheader('2. Understand the environmental evidence')

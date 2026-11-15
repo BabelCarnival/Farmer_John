@@ -6,7 +6,7 @@ import pandas as pd
 from sklearn.linear_model import Ridge
 from sklearn.metrics import mean_absolute_error
 
-HERE=Path(__file__).parent
+HERE=Path(__file__).parent.parent
 LABELS={'tmax_mean_c':'Monthly mean of daily maximum temperature (°C)',
         'rain_mm':'Monthly rainfall total (mm)',
         'hot_days':'Monthly days ≥35°C',

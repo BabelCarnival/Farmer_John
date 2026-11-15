@@ -73,6 +73,7 @@ setTimeout(update,300);
 </script>''',height=0)
 st.markdown('<style>@font-face{font-family:TRCaveat;src:url('+FONT_URI+')}.tr-title{font:700 76px/1.1 TRCaveat,cursive;color:#5fae2e;margin:0}</style><div class="tr-title">TerraRoute</div>',unsafe_allow_html=True)
 st.write('Explore rotation choices for your crops, soil and priorities')
+st.info('**How to use TerraRoute**\n\n1. Pick your farm on the map.\n2. Enter your crops and priorities.\n3. Compare options and download your summary.')
 
 @st.cache_data
 def read_grid():
@@ -91,7 +92,7 @@ def read_grid():
     return r,g
 
 try:raw,grid=read_grid()
-except Exception as e:st.error(f'Could not read the temperature workbook: {e}');st.stop()
+except Exception as e:st.error(f'Could not read the temperature workbook, so the map and later steps cannot be shown: {e}');st.stop()
 st.subheader('1. Your Farm',anchor='location',help='Map: a smooth colour surface visualises the supplied coarse temperature grid. Interpolation is for display only; calculations and selections use the original sampled values. Monthly T2M/Celsius column meanings are inferred pending original NASA export metadata.')
 states=sorted(grid.state.unique());state=st.selectbox('State',states,index=states.index('IOWA'))
 g=grid[grid.state==state].copy().reset_index(drop=True)
@@ -115,7 +116,7 @@ if field=='change_c':vmin,vmax=-max(abs(vmin),abs(vmax)),max(abs(vmin),abs(vmax)
 boundaries=json.loads((ROOT/'data/us_states_2024_20m.geojson').read_text())
 state_feature=next((f for f in boundaries['features'] if f['id']==state),None)
 if state_feature is None:
-    st.error('No state outline found.');st.stop()
+    st.error('No outline found for this state, so the map and later steps cannot be shown. Choose another state.');st.stop()
 state_geometry=state_feature['geometry']
 fig.update_layout(map_layers=[
     smooth_overlay(g,field,vmin,vmax,'YlOrRd' if field=='recent_c' else 'RdBu_r',clip_geometry=state_geometry),
@@ -154,7 +155,7 @@ crop=st.selectbox('Main crop you intend to grow',['Corn','Soybean','Wheat','Rice
 default_history=pd.DataFrame({'Crop':['Corn','Soybean'],'Planting date':[date(2023,5,1),date(2024,5,1)],'Harvest date':[date(2023,10,1),date(2024,10,1)]})
 edited=st.data_editor(default_history,num_rows='dynamic',hide_index=True,width='stretch',key='crop_history_editor',column_config={'Crop':st.column_config.SelectboxColumn(options=['Corn','Soybean','Wheat','Rice','Sorghum','Oats','Red clover','Other'],required=True),'Planting date':st.column_config.DateColumn(required=True),'Harvest date':st.column_config.DateColumn(required=True)})
 try:crop_history,growing_months,gap_months=parse_history(edited)
-except ValueError as e:st.warning(str(e));st.stop()
+except ValueError as e:st.warning(str(e)+' Steps 3–6 stay hidden until every crop row has a crop name, a planting date and a later harvest date.');st.stop()
 sequence=' → '.join(r['Crop'] for r in crop_history)
 a,b=st.columns(2)
 with a:
