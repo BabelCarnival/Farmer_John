@@ -10,7 +10,7 @@ TerraRoute
 
 TerraRoute is a crop-rotation decision-support prototype that helps farmers explore how changes to a crop sequence could fit their soil conditions, priorities and practical constraints. It connects NASA environmental evidence to a six-step journey: understand the farm, analyse conditions, identify vulnerable periods, compare rotation options, stress-test historical scenarios and explain the results.
 
-Farmers compare their current approach with supported cover-crop and diversification alternatives. Plain-language cards show potential roles, trade-offs, supporting references and next checks. The aim is to make rotation planning easier to discuss and review locally, without treating regional weather data as proof of field-level suitability or future benefits.
+For any location, TerraRoute turns NASA POWER data into a plain "farm at a glance": a month-by-month risk calendar (crops, dry months, frost, heat, soil wetness) and a few short takeaways. Farmers then compare their current rotation with two alternatives, each with a 12-month crop strip and indicators computed from their own crop dates and NASA climate. Plain-language cards show trade-offs, supporting references and next checks. The aim is to make rotation planning easier to discuss and review locally, without treating regional weather data as proof of field-level suitability or future benefits.
 
 ## Why it matters
 
@@ -19,17 +19,17 @@ Rotation changes involve more than selecting another crop. Farmers need to consi
 ## Detailed project description
 
 1. **Understand the farm:** collect location, dated crop history, intended crop, local soil information, water access, farmer priorities and implementation constraints.
-2. **Analyse environmental conditions:** display regional historical temperature context and bundled or live NASA POWER daily weather. Request optional modeled soil-wetness indices. Show a separate quality-filtered Ames vegetation example.
+2. **Analyse environmental conditions:** display regional historical temperature context and bundled or live NASA POWER daily weather for any coordinates, including modeled root-zone soil wetness. Build an average-year chart (rain, crop water need from the Turc evapotranspiration estimate, soil wetness), a month-by-month risk calendar and plain-language takeaways. Show a separate quality-filtered Ames vegetation example.
 3. **Identify vulnerable periods:** derive growing-month and potential cover-gap windows from entered crop dates; screen historical heat days and rainfall gaps for review. These windows do not establish actual crop stages or bare soil.
-4. **Compare rotations:** retain the current sequence as a baseline and offer up to two reviewed Iowa corn/soybean alternatives: cereal rye after corn before soybean, and a longer cycle with a small grain and red clover. Explain exclusions where equipment, crop outlets, cover-management capacity or regional evidence are limiting.
-5. **Stress-test:** apply transparent hotter, drier, wetter or custom changes to a historical weather season. Show common crop-season weather exposure once and compare rainfall during assumed uncovered months. The tool does not simulate rotation-induced changes to weather or soil water balance.
+4. **Compare rotations:** retain the current sequence as a baseline and offer two alternatives. Iowa corn/soybean farms get locally reviewed examples (cereal rye after corn before soybean, and a longer cycle with a small grain and red clover). Every other location gets a general climate screen that picks a cover crop for the longest bare window and a different-family crop that suits the growing season, labelled "not locally reviewed" and quoting the NASA numbers behind each choice. Indicators (months with living cover, rain on bare soil, crop families, extra water demand, climate fit) and a 12-month crop strip per option are calculated from the data. Explain exclusions where equipment, crop outlets or cover-management capacity are limiting.
+5. **Stress-test:** apply transparent hotter, drier, wetter or custom changes to the NASA record, recompute the climate (temperature shift, rain factor, evaporative demand), and report for each option the rain on bare soil, dry months while crops grow and frost-likely months for the new crop, with a one-line verdict. The tool does not simulate rotation-induced changes to weather or a full soil water balance.
 6. **Explain:** show evidence, practical trade-offs, uncertainties and next checks. Provide a built-in report helper, optional local Ollama AI explanations and downloadable text/JSON reports.
 
 The application uses Python, Streamlit, pandas, NumPy, Plotly and the libraries listed in `requirements.txt`. A small rule-based crop catalogue and transparent exposure calculations support the workflow; it does not contain a trained crop-response model.
 
 ## NASA data and resources used
 
-- **NASA POWER daily weather:** bundled `T2M_MAX` and `PRECTOTCORR`, 8,766 daily records for 2001–2024 at 42.03°N, 93.62°W near Ames, Iowa. Live point retrieval can request the selected coordinates and optional `GWETTOP` / `GWETROOT` modeled soil wetness, subject to availability.
+- **NASA POWER daily weather (live point API, community AG):** `T2M`, `T2M_MAX`, `T2M_MIN`, `PRECTOTCORR`, `ALLSKY_SFC_SW_DWN`, `GWETTOP` and `GWETROOT` for any coordinates, subject to availability. Used for heat, frost, rain, evaporative demand and soil wetness. A bundled offline fallback holds `T2M_MAX` and `PRECTOTCORR`, 8,766 daily records for 2001–2024 at 42.03°N, 93.62°W near Ames, Iowa.
 - **NASA MODIS/Terra MOD13Q1.061:** NDVI and pixel reliability extracted through NASA AppEEARS, Ames sample, 2024. Good-quality observations enter the vegetation panel.
 - **Supplied temperature workbook:** used for regional historical map context. Source: NASA POWER (https://power.larc.nasa.gov/), as confirmed by the team member who downloaded it. The exact POWER product and export settings were not recorded; monthly columns and Celsius units are inferred.
 
@@ -37,13 +37,13 @@ GPM/IMERG and Landsat imagery are not used by the current main app. Full source 
 
 ## Other data and references
 
-US Census generalized state boundaries clip the map display. Farmer-entered soil, crop and management information supplies local context. Iowa State Extension guidance, an Iowa rotation study and NRCS cover-crop guidance support the reviewed examples and water-use cautions. No verified farm boundary, local soil-survey dataset or measured soil-health outcomes are bundled.
+US Census generalized state boundaries clip the map display. Farmer-entered soil, crop and management information supplies local context. Iowa State Extension guidance, an Iowa rotation study and NRCS cover-crop guidance support the reviewed examples and water-use cautions. The general-screen crop table holds indicative values written by the team; they are not locally reviewed and must be verified (for example with FAO ECOCROP or extension advice). No verified farm boundary, local soil-survey dataset or measured soil-health outcomes are bundled.
 
 ## What is implemented and what remains limited
 
-The app implements mapping, structured inputs, point weather retrieval, historical screening, conditional rotation comparisons, scenario perturbations, explanations and report downloads. The reviewed alternative catalogue is limited to Iowa corn/soybean systems. Other locations can use loaded weather evidence but do not receive invented regional alternatives.
+The app implements mapping, structured inputs, point weather retrieval for any location, a risk calendar, historical screening, rotation comparisons with data-computed indicators, scenario stress tests per option, explanations and report downloads. The locally reviewed alternatives cover Iowa corn/soybean systems only; elsewhere the options come from a general climate screen of indicative values that is clearly labelled and not locally reviewed.
 
-Historical what-if scenarios are not future weather forecasts. Equal growing-month windows produce equal heat and rainfall-gap counts. Living cover uses water, and actual establishment is unverified. Weather grids and a vegetation pixel cannot establish crop suitability, irrigation requirements, yield, profit, erosion reduction or soil-health gains. Modeled wetness is not a field soil test.
+Historical what-if scenarios are not future weather forecasts. Indicators describe the plan, not guaranteed outcomes. NASA weather is gridded (roughly 50–70 km), not field-scale. Living cover uses water, and actual establishment is unverified. Weather grids and a vegetation pixel cannot establish crop suitability, irrigation requirements, yield, profit, erosion reduction or soil-health gains. Modeled wetness is not a field soil test.
 
 ## Links
 
@@ -63,16 +63,16 @@ Optional question answering uses a locally installed Ollama model. Crop-calendar
 
 ## 30-second demo narration
 
-TerraRoute helps farmers explore crop rotations with NASA data. Enter crop history, soil conditions and priorities. Inspect weather exposure and possible cover gaps, then compare the current rotation with supported alternatives. Replay a difficult season under hotter, drier or wetter conditions. Clear explanations show the evidence, trade-offs and missing information, helping farmers decide what to investigate locally before changing their rotation.
+TerraRoute turns NASA data into a plain farm risk calendar for any location. Enter your crops and priorities, see dry, frost and heat months at a glance, then compare your rotation with two alternatives on indicators calculated from the data. Stress-test them under hotter or drier weather and get a one-line verdict. Clear evidence and limits help farmers decide what to check locally.
 
 ## Seven-slide demo outline
 
 1. TerraRoute and the farmer's rotation-planning question.
 2. Why soil, water, timing and practical constraints belong in one decision.
-3. NASA POWER and MODIS evidence, plus farmer inputs and their coverage limits.
-4. Enter an Iowa corn/soybean example and inspect vulnerable periods.
-5. Compare three options; change a constraint and explain an exclusion.
-6. Run a historical what-if scenario; show assumptions and uncertainty.
+3. NASA POWER (seven parameters) and MODIS evidence, plus farmer inputs and their coverage limits.
+4. Load a farm anywhere (Iowa, then California); show the risk calendar and takeaways.
+5. Compare three options with crop strips and indicators; show a general climate-screened option and its NASA-based reason.
+6. Run a hotter and drier stress test; show the verdict, assumptions and uncertainty.
 7. Outcome, limitations, source attribution and public project links.
 
 ## Deployment entry point
