@@ -1,16 +1,21 @@
 """Constraint filtering and disclosed planning-preference index, not crop suitability."""
 import pandas as pd
 from crop_catalog import options
+from general_options import general_options
 
-def recommend(profile):
+def recommend(profile,climate=None):
     candidates,gaps=options(profile);eligible=[];blocked=[]
+    if len(candidates)==1:  # reviewed catalogue does not apply: use the general climate screen
+        if climate is None:gaps=['Load NASA weather in Step 3 to get two climate-screened alternatives for this location.']
+        else:
+            extra,notes=general_options(profile,climate);candidates+=extra;gaps=notes
     weights={'cover_opportunity':int('Improve soil cover' in profile['priorities']),
              'diversity_opportunity':int('Diversify the sequence' in profile['priorities']),
              'implementation_ease':int('Limit added work/equipment' in profile['priorities'])}
     for c in candidates:
         reasons=[]
-        if c['id']=='cover' and profile['cover_feasible']=='No':reasons.append('No cover-establishment/termination capacity')
-        if c['id']=='diversified':
+        if c['id'] in ('cover','general_cover') and profile['cover_feasible']=='No':reasons.append('No cover-establishment/termination capacity')
+        if c['id'] in ('diversified','general_diversified','general_diversified2'):
             if profile['equipment']=='No new equipment':reasons.append('No new equipment/contractor capacity')
             if profile['market']=='No confirmed outlet':reasons.append('No confirmed market or forage use')
         if reasons:blocked.append({'option':c['name'],'reason':'; '.join(reasons)});continue

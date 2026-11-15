@@ -251,7 +251,7 @@ if near_ames:
 else:st.caption('Vegetation data have not been supplied for these coordinates. The Ames pixel is not substituted.')
 
 st.subheader('4. Rotation Choices',anchor='compare')
-options,blocked,gaps,weights=recommend(profile)
+options,blocked,gaps,weights=recommend(profile,monthly_climatology(daily) if daily is not None else None)
 st.write('Compare what changes on your farm, then use Step 5 to check weather exposure.')
 for msg in gaps:st.info(msg)
 if blocked:
@@ -262,6 +262,9 @@ if len(options)<3:st.caption(f'{len(options)} option(s) available with your curr
 def priority_explanation(candidate):
     notes=[]
     current=candidate['id']=='current'
+    ui=candidate.get('ui')
+    if ui and not current:
+        return [x for x,on in [('Adds an opportunity for living cover; establishment must be confirmed.' if candidate['cover_opportunity']==2 else 'Adds some variety; no extra ground cover assumed.','Improve soil cover' in priorities),(ui['note_div'],'Diversify the sequence' in priorities),(ui['note_work'],'Limit added work/equipment' in priorities),('Water use depends on rain and timing; review moisture before assuming a saving.','Conserve water' in priorities)] if on] or ['Select a priority in Step 1 to see the relevant trade-offs.']
     if 'Improve soil cover' in priorities:
         notes.append('Keeps existing cover practices; check gaps and residues.' if current else 'Adds an opportunity for living cover; establishment must be confirmed.')
     if 'Diversify the sequence' in priorities:
@@ -280,32 +283,35 @@ for offset in range(0,len(options),3):
     for column,c in zip(st.columns(min(3,len(options)-offset)),options[offset:offset+3]):
         with column,st.container(border=True):
             st.caption('YOUR CURRENT APPROACH' if c['id']=='current' else 'ALTERNATIVE TO EXPLORE')
+            st.caption('🌍 '+c['badge'] if c.get('general') else '✅ Locally reviewed example' if c['id']!='current' else '')
             st.markdown('### '+c['name'])
             st.write('**Crop sequence**')
             st.write(c['sequence'])
             st.write('**What changes**')
-            st.write('Keep your current crop system as the comparison point.' if c['id']=='current' else 'Plant cereal rye after corn, before soybean; confirm establishment and termination locally.' if c['id']=='cover' else 'Extend the cycle with a small grain and red clover; confirm a local crop calendar and outlet.')
+            st.write('Keep your current crop system as the comparison point.' if c['id']=='current' else c['ui']['what'] if c.get('general') else 'Plant cereal rye after corn, before soybean; confirm establishment and termination locally.' if c['id']=='cover' else 'Extend the cycle with a small grain and red clover; confirm a local crop calendar and outlet.')
             st.write('**For your priorities**')
             for note in priority_explanation(c):st.write('• '+note)
             st.write('**Main trade-off:** '+c['risk'])
-            st.write('**Before trying it:** '+('Confirm current residue cover and uncovered months.' if c['id']=='current' else 'Check seed, sowing access, soil moisture and termination timing.' if c['id']=='cover' else 'Confirm machinery, crop timing and a market or forage use.'))
+            st.write('**Before trying it:** '+('Confirm current residue cover and uncovered months.' if c['id']=='current' else c['ui']['before'] if c.get('general') else 'Check seed, sowing access, soil moisture and termination timing.' if c['id']=='cover' else 'Confirm machinery, crop timing and a market or forage use.'))
             with st.expander('Supporting evidence'):
                 for key in c['source']:st.markdown('['+REFERENCES[key]['note']+']('+REFERENCES[key]['url']+')')
-                if not c['source']:st.write('Your entered crop history; no change assumed.')
+                if c.get('general'):
+                    st.write('**Why this option:** '+c['reason']);st.write('**Risks:** '+' '.join(c['risks']));st.caption('General screening values, verify locally with FAO ECOCROP / extension advice.')
+                elif not c['source']:st.write('Your entered crop history; no change assumed.')
 
 st.markdown('#### The practical differences',help='These describe the proposed management changes. They are not measured benefits or a percentage chance of success. NASA weather exposure is checked separately in Step 5.')
 comparison=[]
 for c in options:
     kind=c['id']
     comparison.append({'Option':c['name'],
-        'Soil cover': 'Existing practices' if kind=='current' else 'Cover between cash crops' if kind=='cover' else 'Longer cycle with additional cover',
-        'Crop diversity': 'Your current mix' if kind=='current' else 'Rye added between crops' if kind=='cover' else 'Small grain and clover added',
-        'Extra work': 'No system change proposed' if kind=='current' else 'Sow and terminate rye' if kind=='cover' else 'More crop operations; check machinery',
+        'Soil cover': 'Existing practices' if kind=='current' else c['ui']['cover'] if c.get('general') else 'Cover between cash crops' if kind=='cover' else 'Longer cycle with additional cover',
+        'Crop diversity': 'Your current mix' if kind=='current' else c['ui']['div'] if c.get('general') else 'Rye added between crops' if kind=='cover' else 'Small grain and clover added',
+        'Extra work': 'No system change proposed' if kind=='current' else c['ui']['work'] if c.get('general') else 'Sow and terminate rye' if kind=='cover' else 'More crop operations; check machinery',
         'Water': 'Not calculated' if kind=='current' else 'Living cover uses water; timing matters'})
 st.table(pd.DataFrame(comparison).set_index('Option'))
 with st.expander('Local checks and comparison method'):
     for note in shared_notes:st.write(note)
-    st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue currently covers Iowa corn/soybean systems only.')
+    st.write('Alternatives are screened using your stated equipment, crop-outlet and cover-management constraints. Unknown answers still need confirmation. The reviewed alternative catalogue covers Iowa corn/soybean systems only; elsewhere a general climate screen (indicative values, verify locally with FAO ECOCROP or extension advice) is used.')
     st.write('For ordering alternatives, selected cover, diversity and work priorities have equal weights on catalogue attributes coded 0–2. This is a planning heuristic, not validated agronomic suitability. Water savings are not scored. The internal values remain in the technical report for transparency; they are not shown as a farmer recommendation percentage.')
 
 st.subheader('5. Hotter, Drier or Wetter',anchor='whatif')
