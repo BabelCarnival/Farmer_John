@@ -44,7 +44,7 @@ Keep the terminal open and open the local URL Streamlit displays. On macOS, `Sta
 | NASA POWER daily `T2M_MAX`, `PRECTOTCORR` | Heat and rainfall exposure | Bundled 8,766 daily records, 2001–2024, at 42.03°N, 93.62°W near Ames, Iowa; `data/power_daily.csv`. |
 | Live NASA POWER point requests | Location-specific daily weather; optional `GWETTOP` / `GWETROOT` | Requires internet. Availability, units and metadata are retained in the report. Failed requests do not substitute Ames. |
 | NASA MODIS/Terra `MOD13Q1.061`, via AppEEARS | Quality-filtered NDVI vegetation context | Ames sample, 2024 only; `data/modis_2024.csv`. A boundary composite from 2023 is excluded. |
-| Supplied temperature workbook | Regional summer-temperature map and historical comparison | `data/usa_temperature_2000_2025.xlsx`. NASA origin is user-attributed; original export metadata and inferred monthly T2M/Celsius schema still need confirmation. |
+| Supplied temperature workbook | Regional summer-temperature map and historical comparison | `data/usa_temperature_2000_2025.xlsx`. Monthly 2-m air temperature (T2M) by grid point, 2000–2025, obtained from NASA POWER (https://power.larc.nasa.gov/) as confirmed by the team member who downloaded it. The exact POWER product and export settings were not recorded; monthly columns and Celsius units are inferred from the file. |
 | US Census state boundaries | Clip smooth map shading to state outlines | Generalized 2024 boundaries; display only, not field boundaries. |
 | Farmer inputs and cited agricultural references | Crop calendars, soil context, constraints and rotation examples | Soil and management information is entered by the user. No local soil-survey dataset is bundled. |
 
@@ -102,4 +102,6 @@ Earlier forecasting notebooks, scripts and outputs remain as research artifacts.
 
 ## AI assistance
 
-ChatGPT/Codex assisted with concept exploration, Python development, interface wording and documentation. Optional Ollama responses are AI-generated; the built-in report helper is deterministic. NASA observations are not AI-generated. The team must review scientific claims, source permissions and the event's disclosure requirements before submitting.
+**Idea and team.** The TerraRoute idea was developed by the team (Chan Sum Choy Levon, Chan Bun Long, Tjong Jia Hui Kenneth, Jing Song Ooi, Yeung Han Jie). We brainstormed it against the challenge requirements and aimed to be creative while keeping the tool easy for farmers to use. AI did not contribute to the idea.
+
+**AI tools used.** AI coding assistants (Claude Code, and ChatGPT/Codex) helped write and refactor Python/Streamlit code, draft interface wording and documentation, and bundle app assets. The optional Ollama assistant produces AI-generated explanations that are not verified agronomic advice; the built-in report helper is deterministic Python, not an AI model. No environmental data are AI-generated: observations come from NASA POWER and MODIS.

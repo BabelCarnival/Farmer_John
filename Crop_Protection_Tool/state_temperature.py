@@ -1,4 +1,4 @@
-"""Monthly T2M from the user-attributed NASA workbook; schema assumptions explicit."""
+"""Monthly T2M from the supplied NASA POWER workbook; schema assumptions explicit."""
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -28,8 +28,8 @@ def load_workbook(state='IOWA',latitude=42.03,longitude=-93.62):
             records.append({'date':pd.Timestamp(int(r.year),month,1),'t2m_mean_c':float(value)})
     monthly=pd.DataFrame(records).set_index('date').sort_index()
     info={'state':state.upper(),'selected_lat':float(nearest.lat),'selected_lon':float(nearest.lon),
-          'source':'User-provided 2000–2025 USA Temp by State workbook, attributed by user to NASA',
-          'schema':'Columns 6–17 interpreted as January–December monthly mean T2M; Celsius assumed. Original export metadata not supplied.',
+          'source':'NASA POWER monthly T2M, 2000–2025 USA Temp by State workbook (source confirmed by team; export settings not recorded)',
+          'schema':'Columns 6–17 interpreted as January–December monthly mean T2M; Celsius assumed. Exact export settings not recorded.',
           'meaning':'Representative grid point within the state label; not a state-wide average and not daily maximum temperature.'}
     return monthly,info
 

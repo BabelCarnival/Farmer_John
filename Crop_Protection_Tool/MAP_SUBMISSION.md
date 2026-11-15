@@ -31,7 +31,7 @@ The application uses Python, Streamlit, pandas, NumPy, Plotly and the libraries 
 
 - **NASA POWER daily weather:** bundled `T2M_MAX` and `PRECTOTCORR`, 8,766 daily records for 2001–2024 at 42.03°N, 93.62°W near Ames, Iowa. Live point retrieval can request the selected coordinates and optional `GWETTOP` / `GWETROOT` modeled soil wetness, subject to availability.
 - **NASA MODIS/Terra MOD13Q1.061:** NDVI and pixel reliability extracted through NASA AppEEARS, Ames sample, 2024. Good-quality observations enter the vegetation panel.
-- **Supplied temperature workbook:** used for regional historical map context. Its NASA origin is user-attributed; original export metadata and inferred monthly schema/units must be confirmed before a definitive provenance claim.
+- **Supplied temperature workbook:** used for regional historical map context. Source: NASA POWER (https://power.larc.nasa.gov/), as confirmed by the team member who downloaded it. The exact POWER product and export settings were not recorded; monthly columns and Celsius units are inferred.
 
 GPM/IMERG and Landsat imagery are not used by the current main app. Full source details are in `SOURCES.md`.
 
@@ -55,7 +55,11 @@ Check that each link works without a password, permission request or registratio
 
 ## Use of SI / AI assistance
 
-ChatGPT/Codex assisted with concept exploration, Python code, interface wording and documentation. Optional question answering uses a locally installed Ollama model. The public report helper uses deterministic responses from current report fields and is not an AI model. Environmental observations are supplied or retrieved NASA data; crop-calendar and scenario settings are planning assumptions. The team must accurately disclose its actual use of AI and review all content against the event's current rules.
+**Idea and team.** The TerraRoute idea was developed by the team (Chan Sum Choy Levon, Chan Bun Long, Tjong Jia Hui Kenneth, Jing Song Ooi, Yeung Han Jie). We brainstormed it against the challenge requirements and aimed to be creative while keeping the tool easy for farmers to use. AI did not contribute to the idea.
+
+**AI tools used.** AI coding assistants (Claude Code, and ChatGPT/Codex) helped write and refactor Python/Streamlit code, draft interface wording and documentation, and bundle app assets. The optional Ollama assistant produces AI-generated explanations that are not verified agronomic advice; the built-in report helper is deterministic Python, not an AI model. No environmental data are AI-generated: observations come from NASA POWER and MODIS.
+
+Optional question answering uses a locally installed Ollama model. Crop-calendar and scenario settings are planning assumptions.
 
 ## 30-second demo narration
 

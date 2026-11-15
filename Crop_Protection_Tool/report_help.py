@@ -12,7 +12,7 @@ def answer_report_question(question, report):
                 ('No daily weather has been loaded for this location.' if not meta else
                  f"Daily weather provenance: {meta.get('source', 'NASA POWER live point request')}. "
                  f"Requested coordinates: {meta.get('requested_coordinates', 'See downloaded report metadata')}.") +
-                '\n\nThe map uses the supplied regional temperature workbook; its original export metadata is still unconfirmed. '
+                '\n\nThe map uses the supplied regional temperature workbook; it comes from NASA POWER (exact export settings were not recorded). '
                 'The bundled vegetation example is Ames-only. Soil conditions are farmer inputs; modeled soil wetness, if loaded, is not a field soil test. '
                 'Open Full sources and methods below for the source register.')
         return text
